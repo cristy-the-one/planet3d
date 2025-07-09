@@ -13,6 +13,7 @@ function setupEarth(bodies) {
 
   // Give Earth 365 rotations per orbit
   earth.selfRotationSpeed = earth.speed * 365;
+  earth.selfRotationSpeed = earth.selfRotationSpeed/8; //too fast if realistic
 
   // Ensure texture orientation matches the north–south axis
   earth.obj.rotation.order = 'YXZ';
