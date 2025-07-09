@@ -175,7 +175,7 @@
     sun.castShadow = true;
     sun.receiveShadow = true;
     scene.add(sun);
-    bodies.push({obj: sun, orbitRadius: 0, name: "Sun", speed: 0});
+    bodies.push({obj: sun, orbitRadius: 0, name: "Sun", speed: 0, selfRotationSpeed: 0.002});
 
     // Planets data with orbital elements
     const planetsData = [
@@ -323,6 +323,7 @@
         obj: planet,
         container: planetContainer,
         speed: data.speed,
+        selfRotationSpeed: 0.005,
         name: data.name,
         angle: 0,
         semiMajorAxis: a,
@@ -366,6 +367,7 @@
             pivot: moonPivot,
             obj: moon,
             speed: moonData.speed,
+            selfRotationSpeed: 0.005,
             name: moonData.name,
             isMoon: true
           });
@@ -454,11 +456,8 @@
           }
           
           // Self-rotation for all bodies
-          body.obj.rotation.y += 0.005 * speedFactor;
+          body.obj.rotation.y += body.selfRotationSpeed * speedFactor;
         });
-        
-        // Sun rotation
-        sun.rotation.y += 0.002 * speedFactor;
       }
 
       controls.update();
@@ -475,6 +474,7 @@
 
     animate();
   </script>
+  <script src="index.js"></script>
 </body>
 
 </html>
