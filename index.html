@@ -148,6 +148,9 @@
     // Hand-drawn style materials
     const sunMaterial = createHandDrawnMaterial(0xffeb3b);
     const planetMaterial = (color) => createHandDrawnMaterial(color);
+
+    // Texture for Earth skin
+    const earthTexture = new THREE.TextureLoader().load('IMG_3077.jpeg');
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0xa5a5a5,
       transparent: true,
@@ -243,7 +246,12 @@
     // Create planets
     planetsData.forEach(data => {
       const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-      const material = planetMaterial(data.color);
+      let material;
+      if (data.name === "Earth") {
+        material = new THREE.MeshStandardMaterial({ map: earthTexture });
+      } else {
+        material = planetMaterial(data.color);
+      }
       const planet = new THREE.Mesh(geometry, material);
       planet.castShadow = planet.receiveShadow = true;
 
