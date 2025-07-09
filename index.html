@@ -148,16 +148,34 @@
     scene.add(sun);
     bodies.push({obj: sun, orbitRadius: 0, name: "Sun", speed: 0});
 
-    // Planets data (name, radius, distance from sun, orbit speed, color, tilt)
+    // Planets data with moons (name, radius, distance from sun, orbit speed, color, tilt, moons)
     const planetsData = [
-      {name: "Mercury", radius: 0.4, distance: 7, speed: 0.04, color: 0xb97a56, tilt: 0.03},
-      {name: "Venus", radius: 0.6, distance: 10, speed: 0.015, color: 0xe6c460, tilt: 177.4},
-      {name: "Earth", radius: 0.7, distance: 15, speed: 0.01, color: 0x4a80f0, tilt: 23.5},
-      {name: "Mars", radius: 0.5, distance: 20, speed: 0.008, color: 0xe2714b, tilt: 25.2},
-      {name: "Jupiter", radius: 1.3, distance: 30, speed: 0.002, color: 0xf0b78e, tilt: 3.1},
-      {name: "Saturn", radius: 1.0, distance: 38, speed: 0.0009, color: 0xf0e078, tilt: 26.7},
-      {name: "Uranus", radius: 0.8, distance: 45, speed: 0.0004, color: 0x7ec7ed, tilt: 97.8},
-      {name: "Neptune", radius: 0.8, distance: 52, speed: 0.0001, color: 0x4b70dd, tilt: 28.3}
+      {name: "Mercury", radius: 0.2, distance: 7, speed: 0.04, color: 0xb97a56, tilt: 0.03, moons: []},
+      {name: "Venus", radius: 0.6, distance: 10, speed: 0.015, color: 0xe6c460, tilt: 177.4, moons: []},
+      {name: "Earth", radius: 0.7, distance: 15, speed: 0.01, color: 0x4a80f0, tilt: 23.5, moons: [
+        {name: "Moon", radius: 0.2, distance: 2, speed: 0.1, color: 0xcfcfcf}
+      ]},
+      {name: "Mars", radius: 0.5, distance: 20, speed: 0.008, color: 0xe2714b, tilt: 25.2, moons: [
+        {name: "Phobos", radius: 0.08, distance: 1.2, speed: 0.15, color: 0x9e7b60},
+        {name: "Deimos", radius: 0.06, distance: 1.8, speed: 0.08, color: 0xa88c75}
+      ]},
+      {name: "Jupiter", radius: 1.3, distance: 30, speed: 0.002, color: 0xf0b78e, tilt: 3.1, moons: [
+        {name: "Io", radius: 0.25, distance: 2.2, speed: 0.12, color: 0xffcc66},
+        {name: "Europa", radius: 0.22, distance: 2.8, speed: 0.09, color: 0xddeeff},
+        {name: "Ganymede", radius: 0.3, distance: 3.5, speed: 0.06, color: 0xb0a090},
+        {name: "Callisto", radius: 0.28, distance: 4.5, speed: 0.04, color: 0x8f7e6b}
+      ]},
+      {name: "Saturn", radius: 1.0, distance: 38, speed: 0.0009, color: 0xf0e078, tilt: 26.7, moons: [
+        {name: "Enceladus", radius: 0.1, distance: 1.8, speed: 0.12, color: 0xffffff},
+        {name: "Titan", radius: 0.35, distance: 3.5, speed: 0.06, color: 0xe0c080}
+      ]},
+      {name: "Uranus", radius: 0.8, distance: 45, speed: 0.0004, color: 0x7ec7ed, tilt: 97.8, moons: [
+        {name: "Titania", radius: 0.15, distance: 2.2, speed: 0.08, color: 0xb0c4de},
+        {name: "Oberon", radius: 0.14, distance: 2.8, speed: 0.06, color: 0xaaaaff}
+      ]},
+      {name: "Neptune", radius: 0.8, distance: 52, speed: 0.0001, color: 0x4b70dd, tilt: 28.3, moons: [
+        {name: "Triton", radius: 0.18, distance: 2.5, speed: 0.07, color: 0xc0d6e4}
+      ]}
     ];
 
     // Ring systems data
@@ -186,15 +204,6 @@
           {innerRadius: 1.4, outerRadius: 1.5, opacity: 0.2, color: 0x3b60cd}
         ]
       }
-    };
-
-    // Earth's moon data
-    const moonData = {
-      name: "Moon",
-      radius: 0.2,
-      distance: 2,
-      speed: 0.1,
-      color: 0xbbbbbb
     };
 
     // Create planets
@@ -260,22 +269,44 @@
         name: data.name
       });
 
-      // For Earth, add the moon
-      if (data.name === "Earth") {
-        const moonGeometry = new THREE.SphereGeometry(moonData.radius, 32, 32);
-        const moonMaterial = planetMaterial(moonData.color);
-        const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+      // Add moons for this planet
+      if (data.moons && data.moons.length > 0) {
+        data.moons.forEach(moonData => {
+          const moonGeometry = new THREE.SphereGeometry(moonData.radius, 32, 32);
+          const moonMaterial = planetMaterial(moonData.color);
+          const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+          moon.castShadow = moon.receiveShadow = true;
 
-        const moonPivot = new THREE.Object3D();
-        planet.add(moonPivot);
-        moonPivot.add(moon);
-        moon.position.set(moonData.distance, 0, 0);
+          // Create moon orbit around planet
+          const moonPivot = new THREE.Object3D();
+          planet.add(moonPivot);
+          moonPivot.add(moon);
+          moon.position.set(moonData.distance, 0, 0);
 
-        bodies.push({
-          pivot: moonPivot,
-          obj: moon,
-          speed: moonData.speed,
-          name: moonData.name
+          // Add moon orbit line
+          const moonOrbitGeometry = new THREE.BufferGeometry();
+          const moonOrbitPoints = [];
+          for (let i = 0; i <= 32; i++) {
+            const angle = (i / 32) * Math.PI * 2;
+            moonOrbitPoints.push(new THREE.Vector3(
+              Math.cos(angle) * moonData.distance, 0, Math.sin(angle) * moonData.distance
+            ));
+          }
+          moonOrbitGeometry.setFromPoints(moonOrbitPoints);
+          const moonOrbitLine = new THREE.Line(moonOrbitGeometry, new THREE.LineBasicMaterial({
+            color: 0xaaaaaa,
+            transparent: true,
+            opacity: 0.3
+          }));
+          planet.add(moonOrbitLine);
+
+          bodies.push({
+            pivot: moonPivot,
+            obj: moon,
+            speed: moonData.speed,
+            name: moonData.name,
+            isMoon: true
+          });
         });
       }
     });
@@ -306,7 +337,7 @@
 
       // Add labels for each planet
       bodies.forEach(body => {
-        if (!body.name || body.name === "Moon") return; // Skip moon label to avoid clutter
+        if (!body.name || body.isMoon) return; // Skip moon labels to avoid clutter
 
         const position = new THREE.Vector3();
         if (body.container) {
