@@ -148,32 +148,40 @@
     scene.add(sun);
     bodies.push({obj: sun, orbitRadius: 0, name: "Sun", speed: 0});
 
-    // Planets data with moons (name, radius, distance from sun, orbit speed, color, tilt, moons)
+    // Planets data with orbital elements
     const planetsData = [
-      {name: "Mercury", radius: 0.2, distance: 7, speed: 0.04, color: 0xb97a56, tilt: 0.03, moons: []},
-      {name: "Venus", radius: 0.6, distance: 10, speed: 0.015, color: 0xe6c460, tilt: 177.4, moons: []},
-      {name: "Earth", radius: 0.7, distance: 15, speed: 0.01, color: 0x4a80f0, tilt: 23.5, moons: [
+      {name: "Mercury", radius: 0.4, semiMajorAxis: 7, speed: 0.04, color: 0xb97a56, tilt: 0.03, 
+       eccentricity: 0.206, inclination: 7.0, moons: []},
+      {name: "Venus", radius: 0.6, semiMajorAxis: 10, speed: 0.015, color: 0xe6c460, tilt: 177.4, 
+       eccentricity: 0.007, inclination: 3.4, moons: []},
+      {name: "Earth", radius: 0.7, semiMajorAxis: 15, speed: 0.01, color: 0x4a80f0, tilt: 23.5, 
+       eccentricity: 0.017, inclination: 0, moons: [
         {name: "Moon", radius: 0.2, distance: 2, speed: 0.1, color: 0xcfcfcf}
       ]},
-      {name: "Mars", radius: 0.5, distance: 20, speed: 0.008, color: 0xe2714b, tilt: 25.2, moons: [
+      {name: "Mars", radius: 0.5, semiMajorAxis: 20, speed: 0.008, color: 0xe2714b, tilt: 25.2, 
+       eccentricity: 0.093, inclination: 1.85, moons: [
         {name: "Phobos", radius: 0.08, distance: 1.2, speed: 0.15, color: 0x9e7b60},
         {name: "Deimos", radius: 0.06, distance: 1.8, speed: 0.08, color: 0xa88c75}
       ]},
-      {name: "Jupiter", radius: 1.3, distance: 30, speed: 0.002, color: 0xf0b78e, tilt: 3.1, moons: [
+      {name: "Jupiter", radius: 1.3, semiMajorAxis: 30, speed: 0.002, color: 0xf0b78e, tilt: 3.1, 
+       eccentricity: 0.049, inclination: 1.3, moons: [
         {name: "Io", radius: 0.25, distance: 2.2, speed: 0.12, color: 0xffcc66},
         {name: "Europa", radius: 0.22, distance: 2.8, speed: 0.09, color: 0xddeeff},
         {name: "Ganymede", radius: 0.3, distance: 3.5, speed: 0.06, color: 0xb0a090},
         {name: "Callisto", radius: 0.28, distance: 4.5, speed: 0.04, color: 0x8f7e6b}
       ]},
-      {name: "Saturn", radius: 1.0, distance: 38, speed: 0.0009, color: 0xf0e078, tilt: 26.7, moons: [
+      {name: "Saturn", radius: 1.0, semiMajorAxis: 38, speed: 0.0009, color: 0xf0e078, tilt: 26.7, 
+       eccentricity: 0.057, inclination: 2.5, moons: [
         {name: "Enceladus", radius: 0.1, distance: 1.8, speed: 0.12, color: 0xffffff},
         {name: "Titan", radius: 0.35, distance: 3.5, speed: 0.06, color: 0xe0c080}
       ]},
-      {name: "Uranus", radius: 0.8, distance: 45, speed: 0.0004, color: 0x7ec7ed, tilt: 97.8, moons: [
+      {name: "Uranus", radius: 0.8, semiMajorAxis: 45, speed: 0.0004, color: 0x7ec7ed, tilt: 97.8, 
+       eccentricity: 0.046, inclination: 0.77, moons: [
         {name: "Titania", radius: 0.15, distance: 2.2, speed: 0.08, color: 0xb0c4de},
         {name: "Oberon", radius: 0.14, distance: 2.8, speed: 0.06, color: 0xaaaaff}
       ]},
-      {name: "Neptune", radius: 0.8, distance: 52, speed: 0.0001, color: 0x4b70dd, tilt: 28.3, moons: [
+      {name: "Neptune", radius: 0.8, semiMajorAxis: 52, speed: 0.0001, color: 0x4b70dd, tilt: 28.3, 
+       eccentricity: 0.011, inclination: 1.77, moons: [
         {name: "Triton", radius: 0.18, distance: 2.5, speed: 0.07, color: 0xc0d6e4}
       ]}
     ];
@@ -213,23 +221,38 @@
       const planet = new THREE.Mesh(geometry, material);
       planet.castShadow = planet.receiveShadow = true;
 
-      // Create orbit path
+      // Calculate ellipse parameters
+      const a = data.semiMajorAxis;
+      const e = data.eccentricity;
+      const b = a * Math.sqrt(1 - e * e); // semi-minor axis
+      const c = a * e; // distance from center to focus
+
+      // Create elliptical orbit path
       const orbitGeometry = new THREE.BufferGeometry();
       const points = [];
 
-      for (let i = 0; i <= 64; i++) {
-        const angle = (i / 64) * Math.PI * 2;
-        points.push(new THREE.Vector3(
-          Math.cos(angle) * data.distance, 0, Math.sin(angle) * data.distance));
+      for (let i = 0; i <= 128; i++) {
+        const angle = (i / 128) * Math.PI * 2;
+        // Ellipse centered at origin
+        const x = a * Math.cos(angle);
+        const z = b * Math.sin(angle);
+        // Shift so Sun is at one focus
+        points.push(new THREE.Vector3(x - c, 0, z));
       }
 
       orbitGeometry.setFromPoints(points);
       const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
       
+      // Orbit group for inclination
+      const orbitGroup = new THREE.Object3D();
+      orbitGroup.rotation.x = THREE.MathUtils.degToRad(data.inclination);
+      scene.add(orbitGroup);
+      
       // Pivot group for orbital motion
       const pivot = new THREE.Object3D();
-      scene.add(pivot);
-      pivot.add(orbitLine);
+      pivot.position.x = -c; // Offset pivot to focus
+      orbitGroup.add(pivot);
+      orbitGroup.add(orbitLine);
       
       // Planet container for axial tilt
       const planetContainer = new THREE.Object3D();
@@ -237,8 +260,8 @@
       pivot.add(planetContainer);
       planetContainer.add(planet);
       
-      // Position planet at its orbital radius
-      planetContainer.position.set(data.distance, 0, 0);
+      // Position planet at perihelion (closest point)
+      planetContainer.position.set(a * (1 - e), 0, 0);
 
       // Add ring systems if applicable
       if (ringSystemsData[data.name]) {
@@ -266,7 +289,12 @@
         obj: planet,
         container: planetContainer,
         speed: data.speed,
-        name: data.name
+        name: data.name,
+        angle: 0,
+        semiMajorAxis: a,
+        semiMinorAxis: b,
+        eccentricity: e,
+        focusOffset: c
       });
 
       // Add moons for this planet
@@ -367,11 +395,35 @@
 
       if (!animationPaused) {
         bodies.forEach((body) => {
-          if (body.pivot) {
-            body.pivot.rotation.y += body.speed * speedFactor;  // revolution
+          if (body.isMoon) {
+            // Moons keep simple circular motion
+            body.pivot.rotation.y += body.speed * speedFactor;
+          } else if (body.eccentricity !== undefined) {
+            // Planets use elliptical motion with variable speed
+            body.angle += body.speed * speedFactor;
+            
+            // Calculate position on ellipse
+            const x = body.semiMajorAxis * Math.cos(body.angle);
+            const z = body.semiMinorAxis * Math.sin(body.angle);
+            
+            // Calculate distance from focus (Sun)
+            const r = Math.sqrt(Math.pow(x + body.focusOffset, 2) + Math.pow(z, 2));
+            
+            // Variable speed: faster when closer (simplified Kepler's 2nd law)
+            const speedMultiplier = Math.pow(body.semiMajorAxis / r, 1.5);
+            body.angle += body.speed * speedFactor * (speedMultiplier - 1) * 0.3;
+            
+            // Update position
+            if (body.container) {
+              body.container.position.set(x, 0, z);
+            }
           }
-          body.obj.rotation.y += 0.005 * speedFactor;          // self-spin
+          
+          // Self-rotation for all bodies
+          body.obj.rotation.y += 0.005 * speedFactor;
         });
+        
+        // Sun rotation
         sun.rotation.y += 0.002 * speedFactor;
       }
 
