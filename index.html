@@ -78,6 +78,21 @@
     button:active {
       transform: translateY(0);
     }
+
+    select {
+      font-family: 'Indie Flower', cursive;
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 1px solid #888;
+      color: #fff;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    select option {
+      background-color: #000;
+      color: #fff;
+    }
   </style>
 </head>
 
@@ -89,6 +104,12 @@
     <div class="mt-2">
       <span class="text-sm">Speed: </span>
       <input type="range" id="speedControl" min="0" max="5" step="0.1" value="1">
+    </div>
+    <div class="mt-2">
+      <span class="text-sm">View from: </span>
+      <select id="planetSelector">
+        <option value="Sun">Sun</option>
+      </select>
     </div>
   </div>
 
@@ -378,6 +399,71 @@
     // Animation state
     let animationPaused = false;
     let speedFactor = 1;
+    let selectedPlanet = null;
+    let cameraAnimating = false;
+    let cameraAnimationProgress = 0;
+    let cameraStartPos = new THREE.Vector3();
+    let cameraEndPos = new THREE.Vector3();
+    let cameraStartTarget = new THREE.Vector3();
+    let cameraEndTarget = new THREE.Vector3();
+
+    // Populate planet selector
+    const planetSelector = document.getElementById('planetSelector');
+    // Filter to get only planets (not moons) and add them in order
+    const planetsForSelector = bodies.filter(body => !body.isMoon);
+    planetsForSelector.forEach(body => {
+      if (body.name !== "Sun") {
+        const option = document.createElement('option');
+        option.value = body.name;
+        option.textContent = body.name;
+        planetSelector.appendChild(option);
+      }
+    });
+
+    // Planet selector change handler
+    planetSelector.addEventListener('change', (e) => {
+      const planetName = e.target.value;
+      const targetBody = bodies.find(b => b.name === planetName);
+      
+      if (!targetBody) return;
+      
+      // Store current camera position and target
+      cameraStartPos.copy(camera.position);
+      cameraStartTarget.copy(controls.target);
+      
+      // Calculate new camera position and target
+      const targetPos = new THREE.Vector3();
+      if (targetBody.container) {
+        targetBody.container.getWorldPosition(targetPos);
+      } else {
+        targetBody.obj.getWorldPosition(targetPos);
+      }
+      
+      if (planetName === "Sun") {
+        // Reset to original view
+        cameraEndPos.set(0, 20, 40);
+        cameraEndTarget.set(0, 0, 0);
+        selectedPlanet = null;
+      } else {
+        // Set camera to view from planet's perspective
+        cameraEndTarget.copy(targetPos);
+        
+        // Calculate camera offset based on planet size
+        const planetRadius = targetBody.obj.geometry.parameters.radius || 1;
+        const offset = planetRadius * 5; // Distance from planet
+        
+        // Position camera offset from planet
+        cameraEndPos.copy(targetPos);
+        cameraEndPos.y += offset * 0.5;
+        cameraEndPos.z += offset;
+        
+        selectedPlanet = targetBody;
+      }
+      
+      // Start animation
+      cameraAnimating = true;
+      cameraAnimationProgress = 0;
+    });
 
     // Controls
     document.getElementById('toggleAnimation').addEventListener('click', () => {
@@ -387,7 +473,10 @@
 
     document.getElementById('resetView').addEventListener('click', () => {
       camera.position.set(0, 20, 40);
+      controls.target.set(0, 0, 0);
       controls.reset();
+      selectedPlanet = null;
+      planetSelector.value = "Sun";
     });
 
     document.getElementById('speedControl').addEventListener('input', (e) => {
@@ -428,6 +517,35 @@
     // Animation loop
     function animate() {
       requestAnimationFrame(animate);
+
+      // Handle camera animation
+      if (cameraAnimating) {
+        cameraAnimationProgress += 0.02;
+        
+        if (cameraAnimationProgress >= 1) {
+          cameraAnimationProgress = 1;
+          cameraAnimating = false;
+        }
+        
+        // Smooth easing function
+        const t = cameraAnimationProgress;
+        const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        
+        // Interpolate camera position
+        camera.position.lerpVectors(cameraStartPos, cameraEndPos, eased);
+        controls.target.lerpVectors(cameraStartTarget, cameraEndTarget, eased);
+      }
+      
+      // Update controls target to follow selected planet
+      if (selectedPlanet && !cameraAnimating) {
+        const targetPos = new THREE.Vector3();
+        if (selectedPlanet.container) {
+          selectedPlanet.container.getWorldPosition(targetPos);
+        } else {
+          selectedPlanet.obj.getWorldPosition(targetPos);
+        }
+        controls.target.copy(targetPos);
+      }
 
       if (!animationPaused) {
         bodies.forEach((body) => {
