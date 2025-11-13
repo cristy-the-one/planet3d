@@ -4,10 +4,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cartoon Solar System</title>
+  <title>Spectacular Solar System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Indie+Flower&display=swap');
 
@@ -97,7 +102,7 @@
 </head>
 
 <body>
-  <div id="info">Solar System Sketch</div>
+  <div id="info">✨ Spectacular Solar System ✨</div>
   <div id="controls">
     <button id="toggleAnimation">Pause</button>
     <button id="resetView">Reset View</button>
@@ -116,39 +121,67 @@
   <script>
     // Initialize Three.js scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
+    scene.background = new THREE.Color(0x000508);
+    scene.fog = new THREE.FogExp2(0x000508, 0.00025);
 
     // Camera setup
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     camera.position.set(0, 20, 40);
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({antialias: true});
+    // Renderer with enhanced settings
+    const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
+
+    // Post-processing setup
+    const composer = new THREE.EffectComposer(renderer);
+    const renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    const bloomPass = new THREE.UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      1.5,  // strength
+      0.4,  // radius
+      0.85  // threshold
+    );
+    composer.addPass(bloomPass);
 
     // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
-    controls.maxDistance = 200;
+    controls.maxDistance = 300;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Lighting - dramatic setup
+    const ambientLight = new THREE.AmbientLight(0x1a1a2e, 0.3);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 20, 10);
-    scene.add(directionalLight);
+    // Sun point light (will be positioned at sun)
+    const sunLight = new THREE.PointLight(0xfff4e6, 3, 300);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 500;
+    scene.add(sunLight);
 
-    // Star field
+    // Enhanced star field with colors and sizes
+    const starCount = 5000;
     const starGeometry = new THREE.BufferGeometry();
-    const starCount = 1000;
     const starVertices = [];
+    const starColors = [];
+    const starSizes = [];
+    const starTwinklePhases = [];
+
     for (let i = 0; i < starCount; i++) {
-      const baseRadius = 1000;
-      const offset = Math.random() * 100; // slight variation so stars aren't on a perfect sphere
+      const baseRadius = 800;
+      const offset = Math.random() * 400;
       const r = baseRadius + offset;
       const theta = Math.acos(2 * Math.random() - 1);
       const phi = 2 * Math.PI * Math.random();
@@ -156,15 +189,109 @@
       const y = r * Math.sin(theta) * Math.sin(phi);
       const z = r * Math.cos(theta);
       starVertices.push(x, y, z);
+
+      // Star colors - mix of white, blue-white, yellow-white, and red
+      const colorType = Math.random();
+      let color;
+      if (colorType < 0.6) {
+        color = new THREE.Color(0xffffff); // White
+      } else if (colorType < 0.8) {
+        color = new THREE.Color(0xaaccff); // Blue-white
+      } else if (colorType < 0.95) {
+        color = new THREE.Color(0xffffcc); // Yellow-white
+      } else {
+        color = new THREE.Color(0xffccaa); // Red
+      }
+      starColors.push(color.r, color.g, color.b);
+
+      // Varying sizes
+      starSizes.push(Math.random() * 3 + 0.5);
+
+      // Random twinkle phase
+      starTwinklePhases.push(Math.random() * Math.PI * 2);
     }
+
     starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+    starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+    starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
+    starGeometry.setAttribute('twinklePhase', new THREE.Float32BufferAttribute(starTwinklePhases, 1));
+
     const starMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 3,
-      sizeAttenuation: false
+      size: 2,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      sizeAttenuation: false,
+      blending: THREE.AdditiveBlending
     });
+
     const starField = new THREE.Points(starGeometry, starMaterial);
     scene.add(starField);
+
+    // Create colorful nebula clouds
+    const nebulaGroups = [];
+    const nebulaColors = [
+      { color: 0x8844ff, pos: new THREE.Vector3(300, 200, -500) },
+      { color: 0xff4488, pos: new THREE.Vector3(-400, -150, -600) },
+      { color: 0x44ff88, pos: new THREE.Vector3(250, -300, -700) },
+      { color: 0xff8844, pos: new THREE.Vector3(-300, 250, -550) }
+    ];
+
+    nebulaColors.forEach(nebulaData => {
+      const nebulaGroup = new THREE.Group();
+      for (let i = 0; i < 3; i++) {
+        const size = 150 + Math.random() * 100;
+        const nebulaGeometry = new THREE.SphereGeometry(size, 32, 32);
+        const nebulaMaterial = new THREE.MeshBasicMaterial({
+          color: nebulaData.color,
+          transparent: true,
+          opacity: 0.03 + Math.random() * 0.02,
+          blending: THREE.AdditiveBlending
+        });
+        const nebulaMesh = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
+        nebulaMesh.position.set(
+          (Math.random() - 0.5) * 100,
+          (Math.random() - 0.5) * 100,
+          (Math.random() - 0.5) * 100
+        );
+        nebulaGroup.add(nebulaMesh);
+      }
+      nebulaGroup.position.copy(nebulaData.pos);
+      scene.add(nebulaGroup);
+      nebulaGroups.push(nebulaGroup);
+    });
+
+    // Space dust particles
+    const dustCount = 1000;
+    const dustGeometry = new THREE.BufferGeometry();
+    const dustVertices = [];
+    const dustVelocities = [];
+
+    for (let i = 0; i < dustCount; i++) {
+      dustVertices.push(
+        (Math.random() - 0.5) * 200,
+        (Math.random() - 0.5) * 200,
+        (Math.random() - 0.5) * 200
+      );
+      dustVelocities.push(
+        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.02
+      );
+    }
+
+    dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
+    const dustMaterial = new THREE.PointsMaterial({
+      color: 0xaaaaaa,
+      size: 0.5,
+      transparent: true,
+      opacity: 0.4,
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending
+    });
+
+    const spaceDust = new THREE.Points(dustGeometry, dustMaterial);
+    scene.add(spaceDust);
 
     // Hand-drawn style materials
     const sunMaterial = createHandDrawnMaterial(0xffeb3b);
@@ -190,13 +317,69 @@
     // Celestial bodies
     const bodies = [];
 
-    // Sun
-    const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
-    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-    sun.castShadow = true;
-    sun.receiveShadow = true;
-    scene.add(sun);
-    bodies.push({obj: sun, orbitRadius: 0, name: "Sun", speed: 0, selfRotationSpeed: 0.002});
+    // Spectacular Sun with multiple layers
+    const sunGroup = new THREE.Group();
+
+    // Core sun
+    const sunGeometry = new THREE.SphereGeometry(3, 64, 64);
+    const sunCoreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffff00,
+      emissive: 0xffff00,
+      emissiveIntensity: 2
+    });
+    const sun = new THREE.Mesh(sunGeometry, sunCoreMaterial);
+    sunGroup.add(sun);
+
+    // Sun glow layer 1
+    const sunGlow1Geometry = new THREE.SphereGeometry(3.3, 64, 64);
+    const sunGlow1Material = new THREE.MeshBasicMaterial({
+      color: 0xffaa00,
+      transparent: true,
+      opacity: 0.4,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide
+    });
+    const sunGlow1 = new THREE.Mesh(sunGlow1Geometry, sunGlow1Material);
+    sunGroup.add(sunGlow1);
+
+    // Sun glow layer 2 (corona)
+    const sunGlow2Geometry = new THREE.SphereGeometry(4, 64, 64);
+    const sunGlow2Material = new THREE.MeshBasicMaterial({
+      color: 0xff6600,
+      transparent: true,
+      opacity: 0.2,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide
+    });
+    const sunGlow2 = new THREE.Mesh(sunGlow2Geometry, sunGlow2Material);
+    sunGroup.add(sunGlow2);
+
+    // Outer corona
+    const sunGlow3Geometry = new THREE.SphereGeometry(5.5, 64, 64);
+    const sunGlow3Material = new THREE.MeshBasicMaterial({
+      color: 0xffdd88,
+      transparent: true,
+      opacity: 0.1,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide
+    });
+    const sunGlow3 = new THREE.Mesh(sunGlow3Geometry, sunGlow3Material);
+    sunGroup.add(sunGlow3);
+
+    scene.add(sunGroup);
+    sunLight.position.set(0, 0, 0);
+
+    bodies.push({
+      obj: sun,
+      group: sunGroup,
+      glow1: sunGlow1,
+      glow2: sunGlow2,
+      glow3: sunGlow3,
+      orbitRadius: 0,
+      name: "Sun",
+      speed: 0,
+      selfRotationSpeed: 0.001
+    });
 
     // Planets data with orbital elements
     const planetsData = [
@@ -264,17 +447,67 @@
       }
     };
 
+    // Particle trail systems for planets
+    const planetTrails = [];
+
     // Create planets
     planetsData.forEach(data => {
       const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
       let material;
       if (data.name === "Earth") {
-        material = new THREE.MeshStandardMaterial({ map: earthTexture });
+        material = new THREE.MeshStandardMaterial({
+          map: earthTexture,
+          metalness: 0.2,
+          roughness: 0.8
+        });
       } else {
         material = planetMaterial(data.color);
       }
       const planet = new THREE.Mesh(geometry, material);
       planet.castShadow = planet.receiveShadow = true;
+
+      // Add atmospheric glow for planets with atmospheres
+      const hasAtmosphere = ["Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].includes(data.name);
+      if (hasAtmosphere) {
+        const glowGeometry = new THREE.SphereGeometry(data.radius * 1.15, 32, 32);
+        let atmosphereColor;
+        switch(data.name) {
+          case "Earth": atmosphereColor = 0x6699ff; break;
+          case "Venus": atmosphereColor = 0xe6c460; break;
+          case "Mars": atmosphereColor = 0xe2714b; break;
+          case "Jupiter": atmosphereColor = 0xf0b78e; break;
+          case "Saturn": atmosphereColor = 0xf0e078; break;
+          case "Uranus": atmosphereColor = 0x7ec7ed; break;
+          case "Neptune": atmosphereColor = 0x4b70dd; break;
+          default: atmosphereColor = 0x88aaff;
+        }
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: atmosphereColor,
+          transparent: true,
+          opacity: 0.15,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending
+        });
+        const atmosphereGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+        planet.add(atmosphereGlow);
+      }
+
+      // Create particle trail for this planet
+      const trailPositions = [];
+      for (let i = 0; i < 100; i++) {
+        trailPositions.push(0, 0, 0);
+      }
+      const trailGeometry = new THREE.BufferGeometry();
+      trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPositions, 3));
+      const trailMaterial = new THREE.LineBasicMaterial({
+        color: data.color,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending
+      });
+      const trail = new THREE.Line(trailGeometry, trailMaterial);
+      scene.add(trail);
+      planetTrails.push({ trail: trail, positions: [], maxLength: 100 });
 
       // Calculate ellipse parameters
       const a = data.semiMajorAxis;
@@ -319,26 +552,37 @@
       planetContainer.position.set(a * (1 - e), 0, 0);
 
       // Add ring systems if applicable
+      const planetRings = [];
       if (ringSystemsData[data.name]) {
         const ringSystem = ringSystemsData[data.name];
         ringSystem.rings.forEach(ringData => {
           const ringGeometry = new THREE.RingGeometry(
-            ringData.innerRadius, 
-            ringData.outerRadius, 
-            64
+            ringData.innerRadius,
+            ringData.outerRadius,
+            128
           );
           const ringMaterial = new THREE.MeshStandardMaterial({
             color: ringData.color,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: ringData.opacity
+            opacity: ringData.opacity,
+            emissive: ringData.color,
+            emissiveIntensity: 0.1,
+            metalness: 0.3,
+            roughness: 0.7
           });
           const ring = new THREE.Mesh(ringGeometry, ringMaterial);
           ring.rotation.x = Math.PI / 2;
           planet.add(ring);
+          planetRings.push({
+            mesh: ring,
+            baseOpacity: ringData.opacity,
+            material: ringMaterial
+          });
         });
       }
 
+      const bodyIndex = bodies.length;
       bodies.push({
         pivot: pivot,
         obj: planet,
@@ -350,7 +594,9 @@
         semiMajorAxis: a,
         semiMinorAxis: b,
         eccentricity: e,
-        focusOffset: c
+        focusOffset: c,
+        trailIndex: planetTrails.length - 1,
+        rings: planetRings
       });
 
       // Add moons for this planet
@@ -395,6 +641,135 @@
         });
       }
     });
+
+    // Asteroid Belt (between Mars and Jupiter)
+    const asteroidBelt = [];
+    const asteroidCount = 800;
+    const asteroidGroup = new THREE.Group();
+
+    for (let i = 0; i < asteroidCount; i++) {
+      const radius = 0.05 + Math.random() * 0.15;
+      const geometry = new THREE.DodecahedronGeometry(radius, 0);
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(0.05 + Math.random() * 0.05, 0.3, 0.3 + Math.random() * 0.2),
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      const asteroid = new THREE.Mesh(geometry, material);
+      asteroid.castShadow = true;
+      asteroid.receiveShadow = true;
+
+      // Position in belt
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 23 + Math.random() * 5; // Between Mars (20) and Jupiter (30)
+      const height = (Math.random() - 0.5) * 1.5;
+
+      asteroid.position.set(
+        Math.cos(angle) * distance,
+        height,
+        Math.sin(angle) * distance
+      );
+
+      asteroid.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
+      asteroidGroup.add(asteroid);
+      asteroidBelt.push({
+        mesh: asteroid,
+        rotationSpeed: {
+          x: (Math.random() - 0.5) * 0.01,
+          y: (Math.random() - 0.5) * 0.01,
+          z: (Math.random() - 0.5) * 0.01
+        },
+        orbitSpeed: 0.005 + Math.random() * 0.003,
+        distance: distance,
+        angle: angle
+      });
+    }
+    scene.add(asteroidGroup);
+
+    // Create spectacular comets
+    const comets = [];
+    const cometCount = 2;
+
+    for (let i = 0; i < cometCount; i++) {
+      const cometGroup = new THREE.Group();
+
+      // Comet nucleus
+      const nucleusGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+      const nucleusMaterial = new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        emissive: 0x4488ff,
+        emissiveIntensity: 0.5,
+        roughness: 0.9
+      });
+      const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+      cometGroup.add(nucleus);
+
+      // Coma (glowing atmosphere around nucleus)
+      const comaGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+      const comaMaterial = new THREE.MeshBasicMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending
+      });
+      const coma = new THREE.Mesh(comaGeometry, comaMaterial);
+      cometGroup.add(coma);
+
+      // Particle tail
+      const tailParticleCount = 500;
+      const tailGeometry = new THREE.BufferGeometry();
+      const tailPositions = [];
+      const tailColors = [];
+      const tailSizes = [];
+
+      for (let j = 0; j < tailParticleCount; j++) {
+        tailPositions.push(0, 0, 0);
+        const color = new THREE.Color(0x88ccff);
+        tailColors.push(color.r, color.g, color.b);
+        tailSizes.push(Math.random() * 2 + 0.5);
+      }
+
+      tailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(tailPositions, 3));
+      tailGeometry.setAttribute('color', new THREE.Float32BufferAttribute(tailColors, 3));
+      tailGeometry.setAttribute('size', new THREE.Float32BufferAttribute(tailSizes, 1));
+
+      const tailMaterial = new THREE.PointsMaterial({
+        size: 1,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true
+      });
+
+      const tail = new THREE.Points(tailGeometry, tailMaterial);
+      cometGroup.add(tail);
+
+      scene.add(cometGroup);
+
+      // Comet orbit parameters (highly elliptical)
+      const semiMajorAxis = 60 + i * 20;
+      const eccentricity = 0.7 + Math.random() * 0.2;
+      const inclination = (Math.random() - 0.5) * 30;
+
+      comets.push({
+        group: cometGroup,
+        nucleus: nucleus,
+        coma: coma,
+        tail: tail,
+        tailPositions: tailPositions,
+        speed: 0.002 + Math.random() * 0.001,
+        angle: Math.random() * Math.PI * 2,
+        semiMajorAxis: semiMajorAxis,
+        eccentricity: eccentricity,
+        inclination: inclination
+      });
+    }
 
     // Animation state
     let animationPaused = false;
@@ -515,27 +890,71 @@
     }
 
     // Animation loop
+    let time = 0;
     function animate() {
       requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Animate sun pulsing glow
+      const sunBody = bodies.find(b => b.name === "Sun");
+      if (sunBody) {
+        const pulse = Math.sin(time * 2) * 0.1 + 1;
+        sunBody.glow1.scale.set(pulse, pulse, pulse);
+        sunBody.glow2.scale.set(pulse * 0.95, pulse * 0.95, pulse * 0.95);
+        sunBody.glow3.scale.set(pulse * 0.9, pulse * 0.9, pulse * 0.9);
+
+        // Pulse sun light intensity
+        sunLight.intensity = 3 + Math.sin(time * 2) * 0.3;
+      }
+
+      // Animate star twinkling
+      const sizes = starGeometry.attributes.size.array;
+      const twinklePhases = starGeometry.attributes.twinklePhase.array;
+      for (let i = 0; i < starCount; i++) {
+        const twinkle = Math.sin(time + twinklePhases[i]) * 0.3 + 0.7;
+        sizes[i] = (Math.random() * 3 + 0.5) * twinkle;
+      }
+      starGeometry.attributes.size.needsUpdate = true;
+
+      // Slowly rotate nebula clouds
+      nebulaGroups.forEach((group, i) => {
+        group.rotation.x += 0.0001 * (i % 2 === 0 ? 1 : -1);
+        group.rotation.y += 0.0002 * (i % 2 === 0 ? 1 : -1);
+      });
+
+      // Animate space dust
+      const dustPositions = dustGeometry.attributes.position.array;
+      for (let i = 0; i < dustCount; i++) {
+        const idx = i * 3;
+        dustPositions[idx] += dustVelocities[idx];
+        dustPositions[idx + 1] += dustVelocities[idx + 1];
+        dustPositions[idx + 2] += dustVelocities[idx + 2];
+
+        // Wrap around
+        if (Math.abs(dustPositions[idx]) > 100) dustPositions[idx] *= -1;
+        if (Math.abs(dustPositions[idx + 1]) > 100) dustPositions[idx + 1] *= -1;
+        if (Math.abs(dustPositions[idx + 2]) > 100) dustPositions[idx + 2] *= -1;
+      }
+      dustGeometry.attributes.position.needsUpdate = true;
 
       // Handle camera animation
       if (cameraAnimating) {
         cameraAnimationProgress += 0.02;
-        
+
         if (cameraAnimationProgress >= 1) {
           cameraAnimationProgress = 1;
           cameraAnimating = false;
         }
-        
+
         // Smooth easing function
         const t = cameraAnimationProgress;
         const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        
+
         // Interpolate camera position
         camera.position.lerpVectors(cameraStartPos, cameraEndPos, eased);
         controls.target.lerpVectors(cameraStartTarget, cameraEndTarget, eased);
       }
-      
+
       // Update controls target to follow selected planet
       if (selectedPlanet && !cameraAnimating) {
         const targetPos = new THREE.Vector3();
@@ -548,39 +967,124 @@
       }
 
       if (!animationPaused) {
-        bodies.forEach((body) => {
+        // Animate asteroids
+        asteroidBelt.forEach(asteroid => {
+          // Rotate asteroids
+          asteroid.mesh.rotation.x += asteroid.rotationSpeed.x * speedFactor;
+          asteroid.mesh.rotation.y += asteroid.rotationSpeed.y * speedFactor;
+          asteroid.mesh.rotation.z += asteroid.rotationSpeed.z * speedFactor;
+
+          // Orbit asteroids
+          asteroid.angle += asteroid.orbitSpeed * speedFactor;
+          const x = Math.cos(asteroid.angle) * asteroid.distance;
+          const z = Math.sin(asteroid.angle) * asteroid.distance;
+          asteroid.mesh.position.x = x;
+          asteroid.mesh.position.z = z;
+        });
+
+        // Animate comets
+        comets.forEach(comet => {
+          comet.angle += comet.speed * speedFactor;
+
+          // Calculate elliptical orbit position
+          const a = comet.semiMajorAxis;
+          const e = comet.eccentricity;
+          const b = a * Math.sqrt(1 - e * e);
+          const c = a * e;
+
+          const x = a * Math.cos(comet.angle) - c;
+          const y = Math.sin(comet.angle * 0.5) * Math.sin(THREE.MathUtils.degToRad(comet.inclination)) * a * 0.3;
+          const z = b * Math.sin(comet.angle);
+
+          comet.group.position.set(x, y, z);
+
+          // Update tail particles
+          const positions = comet.tail.geometry.attributes.position.array;
+          const cometPos = new THREE.Vector3(x, y, z);
+          const sunPos = new THREE.Vector3(0, 0, 0);
+          const tailDirection = new THREE.Vector3().subVectors(cometPos, sunPos).normalize();
+
+          for (let i = 0; i < 500; i++) {
+            const idx = i * 3;
+            const spread = (Math.random() - 0.5) * 3;
+            const length = i * 0.2;
+            positions[idx] = tailDirection.x * length + spread;
+            positions[idx + 1] = tailDirection.y * length + spread;
+            positions[idx + 2] = tailDirection.z * length + spread;
+          }
+          comet.tail.geometry.attributes.position.needsUpdate = true;
+
+          // Pulse coma
+          const comaPulse = Math.sin(time * 3) * 0.2 + 1;
+          comet.coma.scale.set(comaPulse, comaPulse, comaPulse);
+        });
+
+        // Animate celestial bodies
+        bodies.forEach((body, index) => {
           if (body.isMoon) {
             // Moons keep simple circular motion
             body.pivot.rotation.y += body.speed * speedFactor;
           } else if (body.eccentricity !== undefined) {
             // Planets use elliptical motion with variable speed
             body.angle += body.speed * speedFactor;
-            
+
             // Calculate position on ellipse
             const x = body.semiMajorAxis * Math.cos(body.angle);
             const z = body.semiMinorAxis * Math.sin(body.angle);
-            
+
             // Calculate distance from focus (Sun)
             const r = Math.sqrt(Math.pow(x + body.focusOffset, 2) + Math.pow(z, 2));
-            
+
             // Variable speed: faster when closer (simplified Kepler's 2nd law)
             const speedMultiplier = Math.pow(body.semiMajorAxis / r, 1.5);
             body.angle += body.speed * speedFactor * (speedMultiplier - 1) * 0.3;
-            
+
             // Update position
             if (body.container) {
               body.container.position.set(x, 0, z);
+
+              // Update planet trail
+              if (body.trailIndex !== undefined) {
+                const worldPos = new THREE.Vector3();
+                body.container.getWorldPosition(worldPos);
+
+                const trailData = planetTrails[body.trailIndex];
+                trailData.positions.push(worldPos.clone());
+
+                if (trailData.positions.length > trailData.maxLength) {
+                  trailData.positions.shift();
+                }
+
+                const trailPositions = trailData.trail.geometry.attributes.position.array;
+                for (let i = 0; i < trailData.positions.length; i++) {
+                  const pos = trailData.positions[i];
+                  trailPositions[i * 3] = pos.x;
+                  trailPositions[i * 3 + 1] = pos.y;
+                  trailPositions[i * 3 + 2] = pos.z;
+                }
+                trailData.trail.geometry.attributes.position.needsUpdate = true;
+              }
             }
           }
-          
+
           // Self-rotation for all bodies
           body.obj.rotation.y += body.selfRotationSpeed * speedFactor;
+
+          // Animate ring shimmer
+          if (body.rings && body.rings.length > 0) {
+            body.rings.forEach((ringData, ringIndex) => {
+              const shimmer = Math.sin(time * 1.5 + ringIndex) * 0.15 + 0.85;
+              ringData.material.opacity = ringData.baseOpacity * shimmer;
+              ringData.material.emissiveIntensity = 0.1 + Math.sin(time * 2 + ringIndex) * 0.05;
+              ringData.mesh.rotation.z += 0.0001 * speedFactor;
+            });
+          }
         });
       }
 
       controls.update();
       updateLabels();
-      renderer.render(scene, camera);
+      composer.render();
     }
 
     // Handle window resize
@@ -588,6 +1092,7 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
     });
 
     animate();
