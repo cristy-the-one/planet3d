@@ -739,7 +739,7 @@
       cometGroup.add(coma);
 
       // Particle tail
-      const tailParticleCount = 500;
+      const tailParticleCount = 300;
       const tailGeometry = new THREE.BufferGeometry();
       const tailPositions = [];
       const tailColors = [];
@@ -749,7 +749,7 @@
         tailPositions.push(0, 0, 0);
         const color = new THREE.Color(0x88ccff);
         tailColors.push(color.r, color.g, color.b);
-        tailSizes.push(Math.random() * 2 + 0.5);
+        tailSizes.push(Math.random() * 0.3 + 0.1);
       }
 
       tailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(tailPositions, 3));
@@ -757,10 +757,10 @@
       tailGeometry.setAttribute('size', new THREE.Float32BufferAttribute(tailSizes, 1));
 
       const tailMaterial = new THREE.PointsMaterial({
-        size: 1,
+        size: 0.3,
         vertexColors: true,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.35,
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true
       });
@@ -1022,9 +1022,9 @@
           const sunPos = new THREE.Vector3(0, 0, 0);
           const tailDirection = new THREE.Vector3().subVectors(cometPos, sunPos).normalize();
 
-          for (let i = 0; i < 500; i++) {
+          for (let i = 0; i < 300; i++) {
             const idx = i * 3;
-            const spread = (Math.random() - 0.5) * 3;
+            const spread = (Math.random() - 0.5) * 1.5;
             const length = i * 0.2;
             positions[idx] = tailDirection.x * length + spread;
             positions[idx + 1] = tailDirection.y * length + spread;
