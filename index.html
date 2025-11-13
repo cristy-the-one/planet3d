@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -138,18 +139,35 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // Post-processing setup
-    const composer = new THREE.EffectComposer(renderer);
-    const renderPass = new THREE.RenderPass(scene, camera);
-    composer.addPass(renderPass);
+    // Post-processing setup (optional, with fallback)
+    let composer = null;
+    let usePostProcessing = false;
 
-    const bloomPass = new THREE.UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.5,  // strength
-      0.4,  // radius
-      0.85  // threshold
-    );
-    composer.addPass(bloomPass);
+    try {
+      if (typeof THREE.EffectComposer !== 'undefined' &&
+          typeof THREE.RenderPass !== 'undefined' &&
+          typeof THREE.UnrealBloomPass !== 'undefined') {
+        composer = new THREE.EffectComposer(renderer);
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new THREE.UnrealBloomPass(
+          new THREE.Vector2(window.innerWidth, window.innerHeight),
+          1.5,  // strength
+          0.4,  // radius
+          0.85  // threshold
+        );
+        composer.addPass(bloomPass);
+        usePostProcessing = true;
+        console.log('✨ Post-processing enabled with bloom effect');
+      } else {
+        console.warn('⚠️ Post-processing libraries not loaded, using standard rendering');
+      }
+    } catch (error) {
+      console.error('❌ Error setting up post-processing:', error);
+      console.log('📌 Falling back to standard rendering');
+      usePostProcessing = false;
+    }
 
     // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -1084,7 +1102,13 @@
 
       controls.update();
       updateLabels();
-      composer.render();
+
+      // Use post-processing if available, otherwise use standard rendering
+      if (usePostProcessing && composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
     }
 
     // Handle window resize
@@ -1092,7 +1116,9 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      composer.setSize(window.innerWidth, window.innerHeight);
+      if (usePostProcessing && composer) {
+        composer.setSize(window.innerWidth, window.innerHeight);
+      }
     });
 
     animate();
