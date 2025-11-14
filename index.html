@@ -411,7 +411,7 @@
        eccentricity: 0.007, inclination: 3.4, moons: []},
       {name: "Earth", radius: 0.7, semiMajorAxis: 15, speed: 0.01, color: 0x4a80f0, tilt: 23.5, 
        eccentricity: 0.017, inclination: 0, moons: [
-        {name: "Moon", radius: 0.2, distance: 2, speed: 0.1, color: 0xcfcfcf}
+        {name: "Moon", radius: 0.2, distance: 2.5, speed: 0.1, color: 0xcfcfcf}
       ]},
       {name: "Mars", radius: 0.5, semiMajorAxis: 20, speed: 0.008, color: 0xe2714b, tilt: 25.2, 
        eccentricity: 0.093, inclination: 1.85, moons: [
@@ -726,10 +726,10 @@
 
     if (earthBody) {
       // Create multiple orbital rings
-      const numRings = 8; // Number of orbital planes
-      const satellitesPerRing = 30; // Satellites per ring
-      const baseOrbitRadius = 1.2; // Starting orbit radius (visible distance from Earth)
-      const orbitSpacing = 0.15; // Spacing between rings
+      const numRings = 6; // Number of orbital planes
+      const satellitesPerRing = 20; // Satellites per ring
+      const baseOrbitRadius = 1.05; // Starting orbit radius (visible distance from Earth)
+      const orbitSpacing = 0.09; // Spacing between rings
 
       for (let ring = 0; ring < numRings; ring++) {
         const orbitRadius = baseOrbitRadius + (ring * orbitSpacing);
