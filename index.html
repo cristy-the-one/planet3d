@@ -108,6 +108,7 @@
     <button id="toggleAnimation">Pause</button>
     <button id="toggleFreeze">Freeze (Place Asteroids)</button>
     <button id="resetView">Reset View</button>
+    <button id="toggleSatellites">Satellites: Highly Visible</button>
     <div class="mt-2">
       <span class="text-sm">Speed: </span>
       <input type="range" id="speedControl" min="0" max="2" step="0.05" value="0.5">
@@ -567,8 +568,11 @@
       pivot.add(planetContainer);
       planetContainer.add(planet);
       
-      // Position planet at perihelion (closest point)
-      planetContainer.position.set(a * (1 - e), 0, 0);
+      // Position planet at random starting angle on orbit
+      const startAngle = Math.random() * Math.PI * 2;
+      const x = a * Math.cos(startAngle);
+      const z = b * Math.sin(startAngle);
+      planetContainer.position.set(x, 0, z);
 
       // Add ring systems if applicable
       const planetRings = [];
@@ -609,7 +613,7 @@
         speed: data.speed,
         selfRotationSpeed: 0.005,
         name: data.name,
-        angle: 0,
+        angle: startAngle, // Use the random starting angle
         semiMajorAxis: a,
         semiMinorAxis: b,
         eccentricity: e,
@@ -660,6 +664,144 @@
         });
       }
     });
+
+    // Function to create a classical communication satellite
+    function createSatellite() {
+      const satelliteGroup = new THREE.Group();
+
+      // Main body (small box)
+      const bodyGeometry = new THREE.BoxGeometry(0.04, 0.04, 0.06);
+      const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        metalness: 0.8,
+        roughness: 0.2,
+        emissive: 0x4488ff,
+        emissiveIntensity: 0.3
+      });
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+      satelliteGroup.add(body);
+
+      // Solar panels (two wings)
+      const panelGeometry = new THREE.BoxGeometry(0.12, 0.08, 0.002);
+      const panelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a3a5a,
+        metalness: 0.5,
+        roughness: 0.3,
+        emissive: 0x0088ff,
+        emissiveIntensity: 0.2
+      });
+
+      // Left panel
+      const leftPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+      leftPanel.position.set(-0.08, 0, 0);
+      satelliteGroup.add(leftPanel);
+
+      // Right panel
+      const rightPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+      rightPanel.position.set(0.08, 0, 0);
+      satelliteGroup.add(rightPanel);
+
+      // Small antenna
+      const antennaGeometry = new THREE.CylinderGeometry(0.002, 0.002, 0.03, 8);
+      const antennaMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 0.9,
+        roughness: 0.1
+      });
+      const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+      antenna.position.set(0, 0.035, 0);
+      satelliteGroup.add(antenna);
+
+      return satelliteGroup;
+    }
+
+    // Starlink Satellite Constellation around Earth
+    const starlinkSatellites = [];
+    const starlinkGroup = new THREE.Group();
+
+    // Find Earth in the bodies array
+    const earthBody = bodies.find(b => b.name === "Earth");
+
+    if (earthBody) {
+      // Create multiple orbital rings
+      const numRings = 8; // Number of orbital planes
+      const satellitesPerRing = 30; // Satellites per ring
+      const baseOrbitRadius = 0.9; // Starting orbit radius (close to Earth)
+      const orbitSpacing = 0.15; // Spacing between rings
+
+      for (let ring = 0; ring < numRings; ring++) {
+        const orbitRadius = baseOrbitRadius + (ring * orbitSpacing);
+        const ringInclination = (ring * 180 / numRings) % 180; // Different inclinations
+
+        for (let sat = 0; sat < satellitesPerRing; sat++) {
+          const satellite = createSatellite();
+
+          // Random starting position on orbit
+          const startAngle = (sat / satellitesPerRing) * Math.PI * 2 + Math.random() * 0.2;
+
+          // Position satellite on orbit
+          const x = orbitRadius * Math.cos(startAngle);
+          const z = orbitRadius * Math.sin(startAngle);
+          satellite.position.set(x, 0, z);
+
+          // Random rotation
+          satellite.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
+
+          // Create orbital ring container
+          const orbitContainer = new THREE.Object3D();
+          orbitContainer.rotation.x = THREE.MathUtils.degToRad(ringInclination);
+          orbitContainer.add(satellite);
+
+          // Add to Earth (so satellites follow Earth)
+          earthBody.obj.add(orbitContainer);
+
+          starlinkSatellites.push({
+            mesh: satellite,
+            orbitContainer: orbitContainer,
+            orbitRadius: orbitRadius,
+            angle: startAngle,
+            speed: 0.02 + Math.random() * 0.01, // Vary orbital speeds slightly
+            ring: ring
+          });
+        }
+      }
+    }
+
+    // Satellite visibility state
+    let satelliteVisibility = 'highly'; // 'highly' or 'slightly'
+
+    // Function to update satellite visibility
+    function updateSatelliteVisibility() {
+      starlinkSatellites.forEach(sat => {
+        if (satelliteVisibility === 'highly') {
+          sat.mesh.scale.set(3, 3, 3); // Make them bigger for high visibility
+          sat.mesh.children.forEach(child => {
+            if (child.material) {
+              child.material.emissiveIntensity = child.material.emissiveIntensity * 2;
+            }
+          });
+        } else {
+          sat.mesh.scale.set(1, 1, 1); // Normal size
+          sat.mesh.children.forEach(child => {
+            if (child.material && child.material.emissive) {
+              // Reset to original emissive intensity
+              if (child === sat.mesh.children[0]) { // body
+                child.material.emissiveIntensity = 0.3;
+              } else if (child.geometry instanceof THREE.BoxGeometry) { // panels
+                child.material.emissiveIntensity = 0.2;
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // Initialize satellite visibility
+    updateSatelliteVisibility();
 
     // Asteroid Belt (between Mars and Jupiter)
     const asteroidBelt = [];
@@ -899,6 +1041,13 @@
 
     document.getElementById('speedControl').addEventListener('input', (e) => {
       speedFactor = parseFloat(e.target.value);
+    });
+
+    document.getElementById('toggleSatellites').addEventListener('click', () => {
+      satelliteVisibility = satelliteVisibility === 'highly' ? 'slightly' : 'highly';
+      document.getElementById('toggleSatellites').textContent =
+        `Satellites: ${satelliteVisibility === 'highly' ? 'Highly' : 'Slightly'} Visible`;
+      updateSatelliteVisibility();
     });
 
     // Click handler for placing asteroids
@@ -1218,6 +1367,18 @@
               ringData.mesh.rotation.z += 0.0001 * speedFactor;
             });
           }
+        });
+
+        // Animate Starlink satellites
+        starlinkSatellites.forEach(sat => {
+          // Orbit around Earth
+          sat.angle += sat.speed * speedFactor * 0.5;
+          const x = sat.orbitRadius * Math.cos(sat.angle);
+          const z = sat.orbitRadius * Math.sin(sat.angle);
+          sat.mesh.position.set(x, 0, z);
+
+          // Slight rotation for realism
+          sat.mesh.rotation.y += 0.01 * speedFactor;
         });
 
         // Animate user-placed asteroids with physics
