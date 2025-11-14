@@ -881,6 +881,9 @@
         document.getElementById('toggleAnimation').disabled = true;
         renderer.domElement.style.cursor = 'crosshair';
       } else {
+        // Automatically resume simulation when unfreezing
+        animationPaused = false;
+        document.getElementById('toggleAnimation').textContent = "Pause";
         document.getElementById('toggleAnimation').disabled = false;
         renderer.domElement.style.cursor = 'default';
       }
@@ -925,12 +928,13 @@
       // Create asteroid mesh
       const radius = 0.2 + Math.random() * 0.2;
       const geometry = new THREE.DodecahedronGeometry(radius, 0);
+      // Bright cyan color to distinguish from asteroid belt (brown/gray)
       const material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color().setHSL(0.05 + Math.random() * 0.05, 0.4, 0.4 + Math.random() * 0.2),
-        roughness: 0.9,
-        metalness: 0.2,
-        emissive: 0xff4400,
-        emissiveIntensity: 0.3
+        color: 0x00ffff,
+        roughness: 0.7,
+        metalness: 0.3,
+        emissive: 0x00ccff,
+        emissiveIntensity: 0.8
       });
       const asteroid = new THREE.Mesh(geometry, material);
       asteroid.castShadow = true;
@@ -946,16 +950,32 @@
 
       scene.add(asteroid);
 
+      // Create trajectory trail for this asteroid
+      const trailPositions = [];
+      for (let i = 0; i < 150; i++) {
+        trailPositions.push(position.x, position.y, position.z);
+      }
+      const trailGeometry = new THREE.BufferGeometry();
+      trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPositions, 3));
+      const trailMaterial = new THREE.LineBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      const trail = new THREE.Line(trailGeometry, trailMaterial);
+      scene.add(trail);
+
       // Calculate initial velocity toward the Sun with some randomness
       const directionToSun = new THREE.Vector3(0, 0, 0).sub(position).normalize();
 
-      // Add some bias toward the Sun but with variation
-      const speed = 0.1 + Math.random() * 0.1;
+      // Add some bias toward the Sun but with variation (reduced 10x for more realistic speeds)
+      const speed = 0.01 + Math.random() * 0.01;
       const velocity = directionToSun.multiplyScalar(speed);
 
       // Add some perpendicular velocity for more interesting trajectories
       const perpendicular = new THREE.Vector3(-directionToSun.z, 0, directionToSun.x);
-      velocity.add(perpendicular.multiplyScalar((Math.random() - 0.5) * 0.1));
+      velocity.add(perpendicular.multiplyScalar((Math.random() - 0.5) * 0.01));
 
       // Store asteroid data
       userAsteroids.push({
@@ -967,7 +987,10 @@
           x: (Math.random() - 0.5) * 0.05,
           y: (Math.random() - 0.5) * 0.05,
           z: (Math.random() - 0.5) * 0.05
-        }
+        },
+        trail: trail,
+        trailPositions: [position.clone()],
+        maxTrailLength: 150
       });
     }
 
@@ -1258,6 +1281,21 @@
           // Update position
           asteroid.mesh.position.add(asteroid.velocity.clone().multiplyScalar(speedFactor));
 
+          // Update trail
+          asteroid.trailPositions.push(asteroid.mesh.position.clone());
+          if (asteroid.trailPositions.length > asteroid.maxTrailLength) {
+            asteroid.trailPositions.shift();
+          }
+
+          const trailPosArray = asteroid.trail.geometry.attributes.position.array;
+          for (let i = 0; i < asteroid.trailPositions.length; i++) {
+            const pos = asteroid.trailPositions[i];
+            trailPosArray[i * 3] = pos.x;
+            trailPosArray[i * 3 + 1] = pos.y;
+            trailPosArray[i * 3 + 2] = pos.z;
+          }
+          asteroid.trail.geometry.attributes.position.needsUpdate = true;
+
           // Rotate asteroid
           asteroid.mesh.rotation.x += asteroid.rotationSpeed.x * speedFactor;
           asteroid.mesh.rotation.y += asteroid.rotationSpeed.y * speedFactor;
@@ -1267,8 +1305,11 @@
         // Remove collided/escaped asteroids
         asteroidsToRemove.reverse().forEach(index => {
           scene.remove(userAsteroids[index].mesh);
+          scene.remove(userAsteroids[index].trail);
           userAsteroids[index].mesh.geometry.dispose();
           userAsteroids[index].mesh.material.dispose();
+          userAsteroids[index].trail.geometry.dispose();
+          userAsteroids[index].trail.material.dispose();
           userAsteroids.splice(index, 1);
         });
       }
