@@ -778,7 +778,7 @@
     function updateSatelliteVisibility() {
       starlinkSatellites.forEach(sat => {
         if (satelliteVisibility === 'highly') {
-          sat.mesh.scale.set(1, 1, 1); // Normal size for high visibility
+          sat.mesh.scale.set(2.5, 2.5, 2.5); // Normal size for high visibility
           sat.mesh.children.forEach(child => {
             if (child.material && child.material.emissive) {
               // Standard emissive intensity
@@ -790,7 +790,7 @@
             }
           });
         } else {
-          sat.mesh.scale.set(0.3, 0.3, 0.3); // Much smaller for slight visibility
+          sat.mesh.scale.set(1, 1, 1); // Much smaller for slight visibility
           sat.mesh.children.forEach(child => {
             if (child.material && child.material.emissive) {
               // Reduced emissive intensity
