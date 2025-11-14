@@ -119,6 +119,15 @@
         <option value="Sun">Sun</option>
       </select>
     </div>
+    <div id="planeSelector" class="mt-2" style="display: none;">
+      <span class="text-sm">Placement Plane: </span>
+      <select id="planeSelect">
+        <option value="0">North-South</option>
+        <option value="90">East-West</option>
+        <option value="45">45° Diagonal</option>
+        <option value="135">135° Diagonal</option>
+      </select>
+    </div>
   </div>
 
   <script>
@@ -776,6 +785,103 @@
     // Satellite visibility state
     let satelliteVisibility = 'highly'; // 'highly' or 'slightly'
 
+    // Function to create the placement plane helper
+    function createPlacementPlane(angle) {
+      // Remove existing plane helper if it exists
+      if (placementPlaneHelper) {
+        scene.remove(placementPlaneHelper);
+        placementPlaneHelper.geometry.dispose();
+        placementPlaneHelper.material.dispose();
+      }
+
+      // Create a large circular disc to represent the placement plane
+      const planeRadius = 100; // Large enough to cover the solar system view
+      const segments = 64;
+      
+      // Create a grid-like appearance
+      const gridHelper = new THREE.Group();
+      
+      // Main disc with subtle transparency
+      const discGeometry = new THREE.CircleGeometry(planeRadius, segments);
+      const discMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.1,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      });
+      const disc = new THREE.Mesh(discGeometry, discMaterial);
+      gridHelper.add(disc);
+      
+      // Add grid lines for better visibility
+      const gridLines = new THREE.Group();
+      
+      // Radial lines
+      for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2;
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(Math.cos(angle) * planeRadius, Math.sin(angle) * planeRadius, 0)
+        ]);
+        const lineMaterial = new THREE.LineBasicMaterial({
+          color: 0x00ffff,
+          transparent: true,
+          opacity: 0.3
+        });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        gridLines.add(line);
+      }
+      
+      // Circular rings
+      for (let r = 20; r <= planeRadius; r += 20) {
+        const ringGeometry = new THREE.RingGeometry(r - 0.1, r + 0.1, segments);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+          color: 0x00ffff,
+          transparent: true,
+          opacity: 0.3,
+          side: THREE.DoubleSide
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        gridLines.add(ring);
+      }
+      
+      gridHelper.add(gridLines);
+      
+      // Rotate the plane based on the selected angle
+      // North-South (0°): XY plane rotated 90° around X axis
+      // East-West (90°): YZ plane rotated 90° around Y axis
+      // 45° and 135°: diagonal planes
+      
+      if (angle === 0) {
+        // North-South: XY plane (vertical, facing Z direction)
+        gridHelper.rotation.x = Math.PI / 2;
+      } else if (angle === 90) {
+        // East-West: YZ plane (vertical, facing X direction)
+        gridHelper.rotation.x = Math.PI / 2;
+        gridHelper.rotation.z = Math.PI / 2;
+      } else if (angle === 45) {
+        // 45° diagonal
+        gridHelper.rotation.x = Math.PI / 2;
+        gridHelper.rotation.z = Math.PI / 4;
+      } else if (angle === 135) {
+        // 135° diagonal (270° in the problem statement)
+        gridHelper.rotation.x = Math.PI / 2;
+        gridHelper.rotation.z = (Math.PI * 3) / 4;
+      }
+      
+      placementPlaneHelper = gridHelper;
+      scene.add(placementPlaneHelper);
+    }
+
+    // Function to update placement plane visibility
+    function updatePlacementPlaneVisibility() {
+      if (freezeMode && placementPlaneHelper) {
+        placementPlaneHelper.visible = true;
+      } else if (placementPlaneHelper) {
+        placementPlaneHelper.visible = false;
+      }
+    }
+
     // Function to update satellite visibility
     function updateSatelliteVisibility() {
       starlinkSatellites.forEach(sat => {
@@ -956,6 +1062,10 @@
     const MAX_USER_ASTEROIDS = 100; // Support more than 50
     const ESCAPE_DISTANCE = 400; // Distance at which asteroids are removed
     const G = 0.1; // Gravitational constant for simulation
+    
+    // Asteroid placement plane settings
+    let placementPlaneAngle = 0; // Default: North-South (0 degrees)
+    let placementPlaneHelper = null; // Visual representation of the placement plane
 
     // Populate planet selector
     const planetSelector = document.getElementById('planetSelector');
@@ -1024,17 +1134,32 @@
     document.getElementById('toggleFreeze').addEventListener('click', () => {
       freezeMode = !freezeMode;
       document.getElementById('toggleFreeze').textContent = freezeMode ? "Unfreeze" : "Freeze (Place Asteroids)";
+      const planeSelectorDiv = document.getElementById('planeSelector');
+      
       if (freezeMode) {
         animationPaused = true;
         document.getElementById('toggleAnimation').textContent = "Play";
         document.getElementById('toggleAnimation').disabled = true;
         renderer.domElement.style.cursor = 'crosshair';
+        
+        // Show plane selector
+        planeSelectorDiv.style.display = 'block';
+        
+        // Create the placement plane with current angle
+        createPlacementPlane(placementPlaneAngle);
+        updatePlacementPlaneVisibility();
       } else {
         // Automatically resume simulation when unfreezing
         animationPaused = false;
         document.getElementById('toggleAnimation').textContent = "Pause";
         document.getElementById('toggleAnimation').disabled = false;
         renderer.domElement.style.cursor = 'default';
+        
+        // Hide plane selector
+        planeSelectorDiv.style.display = 'none';
+        
+        // Hide the placement plane
+        updatePlacementPlaneVisibility();
       }
     });
 
@@ -1057,6 +1182,15 @@
       updateSatelliteVisibility();
     });
 
+    // Plane selector change handler
+    document.getElementById('planeSelect').addEventListener('change', (e) => {
+      placementPlaneAngle = parseFloat(e.target.value);
+      if (freezeMode) {
+        createPlacementPlane(placementPlaneAngle);
+        updatePlacementPlaneVisibility();
+      }
+    });
+
     // Click handler for placing asteroids
     function onCanvasClick(event) {
       if (!freezeMode || userAsteroids.length >= MAX_USER_ASTEROIDS) return;
@@ -1070,8 +1204,28 @@
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
-      // Use a plane at y=0 for placement
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      // Create the appropriate plane based on the selected angle
+      let plane;
+      
+      if (placementPlaneAngle === 0) {
+        // North-South: XY plane (vertical plane facing Z)
+        plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+      } else if (placementPlaneAngle === 90) {
+        // East-West: YZ plane (vertical plane facing X)
+        plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
+      } else if (placementPlaneAngle === 45) {
+        // 45° diagonal: rotated plane
+        const normal = new THREE.Vector3(1, 0, 1).normalize();
+        plane = new THREE.Plane(normal, 0);
+      } else if (placementPlaneAngle === 135) {
+        // 135° diagonal (270° from problem statement): rotated plane
+        const normal = new THREE.Vector3(-1, 0, 1).normalize();
+        plane = new THREE.Plane(normal, 0);
+      } else {
+        // Fallback to horizontal plane
+        plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      }
+      
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
 
