@@ -45,6 +45,7 @@
       font-family: 'Indie Flower', cursive;
       color: #fff;
       max-width: 250px;
+      transition: transform 0.3s ease;
     }
 
     .control-section {
@@ -153,6 +154,7 @@
       font-family: 'Indie Flower', cursive;
       color: #fff;
       max-width: 250px;
+      transition: transform 0.3s ease;
     }
 
     .audio-section {
@@ -182,13 +184,117 @@
     .volume-control input[type="range"] {
       flex: 1;
     }
+
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      #controls, #audioControls {
+        max-width: calc(100vw - 40px);
+        width: calc(100vw - 40px);
+        bottom: 10px;
+        left: 10px;
+        right: auto;
+        max-height: 60vh;
+        overflow-y: auto;
+        font-size: 14px;
+      }
+
+      #audioControls {
+        left: 10px;
+        right: auto;
+        bottom: auto;
+        top: 60px;
+      }
+
+      /* Make controls collapsible on mobile */
+      .control-panel-header {
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 0;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+
+      .control-panel-header::after {
+        content: '▼';
+        font-size: 12px;
+        transition: transform 0.3s ease;
+      }
+
+      .control-panel-header.collapsed::after {
+        transform: rotate(-90deg);
+      }
+
+      .control-panel-content {
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        opacity: 1;
+      }
+
+      .control-panel-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+      }
+
+      #info {
+        font-size: 16px;
+        top: 5px;
+      }
+
+      button {
+        padding: 8px 12px;
+        font-size: 14px;
+        margin: 3px;
+        touch-action: manipulation;
+      }
+
+      select {
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+
+      input[type="range"] {
+        height: 30px;
+      }
+
+      .volume-control label {
+        font-size: 13px;
+        min-width: 70px;
+      }
+    }
+
+    /* Extra small mobile devices */
+    @media (max-width: 400px) {
+      #controls, #audioControls {
+        font-size: 13px;
+        padding: 8px;
+      }
+
+      button {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+
+      select {
+        font-size: 13px;
+      }
+
+      .volume-control label {
+        font-size: 12px;
+        min-width: 60px;
+      }
+    }
   </style>
 </head>
 
 <body>
   <div id="info">✨ Spectacular Solar System ✨</div>
   <div id="controls">
-    <div style="font-weight: bold; margin-bottom: 8px;">🎬 Animation Controls</div>
+    <div class="control-panel-header" id="animationControlsHeader">🎬 Animation Controls</div>
+    <div class="control-panel-content" id="animationControlsContent">
     
     <div class="control-section">
       <button id="toggleAnimation">Pause</button>
@@ -227,10 +333,12 @@
         <option value="135">135° Diagonal</option>
       </select>
     </div>
+    </div>
   </div>
 
   <div id="audioControls">
-    <div style="font-weight: bold; margin-bottom: 8px;">🎵 Audio Controls</div>
+    <div class="control-panel-header" id="audioControlsHeader">🎵 Audio Controls</div>
+    <div class="control-panel-content" id="audioControlsContent">
     
     <div class="audio-section">
       <button id="toggleAudio" style="width: 100%;">Start Audio</button>
@@ -277,9 +385,75 @@
         <input type="range" id="spatialVolume" min="0" max="100" value="40">
       </div>
     </div>
+    </div>
   </div>
 
   <script>
+    // =============================================================================
+    // MOBILE COLLAPSIBLE PANEL CONTROLS - Must run early before THREE.js code
+    // =============================================================================
+    
+    (function() {
+      // Track if event listeners have been added
+      let listenersAdded = false;
+      
+      // Function to setup collapsible panels for mobile
+      function setupCollapsiblePanels() {
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        
+        if (isMobile && !listenersAdded) {
+          // Animation controls panel
+          const animationHeader = document.getElementById('animationControlsHeader');
+          const animationContent = document.getElementById('animationControlsContent');
+          
+          if (animationHeader && animationContent) {
+            animationHeader.addEventListener('click', function() {
+              this.classList.toggle('collapsed');
+              animationContent.classList.toggle('collapsed');
+            });
+          }
+          
+          // Audio controls panel - start collapsed on mobile to save space
+          const audioHeader = document.getElementById('audioControlsHeader');
+          const audioContent = document.getElementById('audioControlsContent');
+          
+          if (audioHeader && audioContent) {
+            // Start collapsed on mobile
+            audioHeader.classList.add('collapsed');
+            audioContent.classList.add('collapsed');
+            
+            audioHeader.addEventListener('click', function() {
+              this.classList.toggle('collapsed');
+              audioContent.classList.toggle('collapsed');
+            });
+          }
+          
+          listenersAdded = true;
+        } else if (!isMobile) {
+          // Remove collapsed classes on desktop
+          const animationHeader = document.getElementById('animationControlsHeader');
+          const animationContent = document.getElementById('animationControlsContent');
+          const audioHeader = document.getElementById('audioControlsHeader');
+          const audioContent = document.getElementById('audioControlsContent');
+          
+          if (animationHeader) animationHeader.classList.remove('collapsed');
+          if (animationContent) animationContent.classList.remove('collapsed');
+          if (audioHeader) audioHeader.classList.remove('collapsed');
+          if (audioContent) audioContent.classList.remove('collapsed');
+        }
+      }
+      
+      // Setup collapsible panels on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupCollapsiblePanels);
+      } else {
+        setupCollapsiblePanels();
+      }
+      
+      // Re-setup on window resize
+      window.addEventListener('resize', setupCollapsiblePanels);
+    })();
+    
     // =============================================================================
     // AUDIO SYSTEM - Immersive Celestial Soundscape
     // =============================================================================
