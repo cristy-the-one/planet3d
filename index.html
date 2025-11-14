@@ -38,10 +38,10 @@
       position: absolute;
       bottom: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 10px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 15px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
       font-family: 'Indie Flower', cursive;
       color: #fff;
       max-width: 250px;
@@ -147,10 +147,10 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 10px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 15px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
       font-family: 'Indie Flower', cursive;
       color: #fff;
       max-width: 250px;
@@ -185,6 +185,40 @@
       flex: 1;
     }
 
+    /* Collapsible panel controls for both desktop and mobile */
+    .control-panel-header {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .control-panel-header::after {
+      content: '▼';
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+
+    .control-panel-header.collapsed::after {
+      transform: rotate(-90deg);
+    }
+
+    .control-panel-content {
+      max-height: 500px;
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      opacity: 1;
+    }
+
+    .control-panel-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
     /* Mobile responsive styles */
     @media (max-width: 768px) {
       #controls, #audioControls {
@@ -203,40 +237,6 @@
         right: auto;
         bottom: auto;
         top: 60px;
-      }
-
-      /* Make controls collapsible on mobile */
-      .control-panel-header {
-        cursor: pointer;
-        user-select: none;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 5px 0;
-        font-weight: bold;
-        margin-bottom: 8px;
-      }
-
-      .control-panel-header::after {
-        content: '▼';
-        font-size: 12px;
-        transition: transform 0.3s ease;
-      }
-
-      .control-panel-header.collapsed::after {
-        transform: rotate(-90deg);
-      }
-
-      .control-panel-content {
-        max-height: 500px;
-        overflow: hidden;
-        transition: max-height 0.3s ease, opacity 0.3s ease;
-        opacity: 1;
-      }
-
-      .control-panel-content.collapsed {
-        max-height: 0;
-        opacity: 0;
       }
 
       #info {
@@ -390,57 +390,44 @@
 
   <script>
     // =============================================================================
-    // MOBILE COLLAPSIBLE PANEL CONTROLS - Must run early before THREE.js code
+    // COLLAPSIBLE PANEL CONTROLS - Works on both desktop and mobile
     // =============================================================================
     
     (function() {
       // Track if event listeners have been added
       let listenersAdded = false;
       
-      // Function to setup collapsible panels for mobile
+      // Function to setup collapsible panels
       function setupCollapsiblePanels() {
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        if (listenersAdded) return;
         
-        if (isMobile && !listenersAdded) {
-          // Animation controls panel
-          const animationHeader = document.getElementById('animationControlsHeader');
-          const animationContent = document.getElementById('animationControlsContent');
-          
-          if (animationHeader && animationContent) {
-            animationHeader.addEventListener('click', function() {
-              this.classList.toggle('collapsed');
-              animationContent.classList.toggle('collapsed');
-            });
-          }
-          
-          // Audio controls panel - start collapsed on mobile to save space
-          const audioHeader = document.getElementById('audioControlsHeader');
-          const audioContent = document.getElementById('audioControlsContent');
-          
-          if (audioHeader && audioContent) {
-            // Start collapsed on mobile
-            audioHeader.classList.add('collapsed');
-            audioContent.classList.add('collapsed');
-            
-            audioHeader.addEventListener('click', function() {
-              this.classList.toggle('collapsed');
-              audioContent.classList.toggle('collapsed');
-            });
-          }
-          
-          listenersAdded = true;
-        } else if (!isMobile) {
-          // Remove collapsed classes on desktop
-          const animationHeader = document.getElementById('animationControlsHeader');
-          const animationContent = document.getElementById('animationControlsContent');
-          const audioHeader = document.getElementById('audioControlsHeader');
-          const audioContent = document.getElementById('audioControlsContent');
-          
-          if (animationHeader) animationHeader.classList.remove('collapsed');
-          if (animationContent) animationContent.classList.remove('collapsed');
-          if (audioHeader) audioHeader.classList.remove('collapsed');
-          if (audioContent) audioContent.classList.remove('collapsed');
+        // Animation controls panel
+        const animationHeader = document.getElementById('animationControlsHeader');
+        const animationContent = document.getElementById('animationControlsContent');
+        
+        if (animationHeader && animationContent) {
+          animationHeader.addEventListener('click', function() {
+            this.classList.toggle('collapsed');
+            animationContent.classList.toggle('collapsed');
+          });
         }
+        
+        // Audio controls panel - start collapsed to save space
+        const audioHeader = document.getElementById('audioControlsHeader');
+        const audioContent = document.getElementById('audioControlsContent');
+        
+        if (audioHeader && audioContent) {
+          // Start collapsed
+          audioHeader.classList.add('collapsed');
+          audioContent.classList.add('collapsed');
+          
+          audioHeader.addEventListener('click', function() {
+            this.classList.toggle('collapsed');
+            audioContent.classList.toggle('collapsed');
+          });
+        }
+        
+        listenersAdded = true;
       }
       
       // Setup collapsible panels on DOM ready
@@ -449,9 +436,6 @@
       } else {
         setupCollapsiblePanels();
       }
-      
-      // Re-setup on window resize
-      window.addEventListener('resize', setupCollapsiblePanels);
     })();
     
     // =============================================================================
@@ -2295,6 +2279,15 @@
 
         position.project(camera);
 
+        // Only show label if the planet is in front of the camera and within viewport
+        // position.z > 1 means behind the camera
+        // Check if within screen bounds with some margin
+        if (position.z > 1 || 
+            position.x < -1.2 || position.x > 1.2 || 
+            position.y < -1.2 || position.y > 1.2) {
+          return; // Planet is not visible, skip label
+        }
+
         const x = (position.x * 0.5 + 0.5) * window.innerWidth;
         const y = (position.y * -0.5 + 0.5) * window.innerHeight;
 
@@ -2586,6 +2579,8 @@
             trailPosArray[i * 3 + 1] = pos.y;
             trailPosArray[i * 3 + 2] = pos.z;
           }
+          // Only draw the actual number of trail positions to avoid straight line artifacts
+          asteroid.trail.geometry.setDrawRange(0, asteroid.trailPositions.length);
           asteroid.trail.geometry.attributes.position.needsUpdate = true;
 
           // Rotate asteroid
