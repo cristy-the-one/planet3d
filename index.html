@@ -106,10 +106,11 @@
   <div id="info">✨ Spectacular Solar System ✨</div>
   <div id="controls">
     <button id="toggleAnimation">Pause</button>
+    <button id="toggleFreeze">Freeze (Place Asteroids)</button>
     <button id="resetView">Reset View</button>
     <div class="mt-2">
       <span class="text-sm">Speed: </span>
-      <input type="range" id="speedControl" min="0" max="5" step="0.1" value="1">
+      <input type="range" id="speedControl" min="0" max="2" step="0.05" value="0.5">
     </div>
     <div class="mt-2">
       <span class="text-sm">View from: </span>
@@ -791,7 +792,7 @@
 
     // Animation state
     let animationPaused = false;
-    let speedFactor = 1;
+    let speedFactor = 0.5;
     let selectedPlanet = null;
     let cameraAnimating = false;
     let cameraAnimationProgress = 0;
@@ -799,6 +800,13 @@
     let cameraEndPos = new THREE.Vector3();
     let cameraStartTarget = new THREE.Vector3();
     let cameraEndTarget = new THREE.Vector3();
+
+    // Freeze mode for asteroid placement
+    let freezeMode = false;
+    let userAsteroids = [];
+    const MAX_USER_ASTEROIDS = 100; // Support more than 50
+    const ESCAPE_DISTANCE = 400; // Distance at which asteroids are removed
+    const G = 0.1; // Gravitational constant for simulation
 
     // Populate planet selector
     const planetSelector = document.getElementById('planetSelector');
@@ -864,6 +872,20 @@
       document.getElementById('toggleAnimation').textContent = animationPaused ? "Play" : "Pause";
     });
 
+    document.getElementById('toggleFreeze').addEventListener('click', () => {
+      freezeMode = !freezeMode;
+      document.getElementById('toggleFreeze').textContent = freezeMode ? "Unfreeze" : "Freeze (Place Asteroids)";
+      if (freezeMode) {
+        animationPaused = true;
+        document.getElementById('toggleAnimation').textContent = "Play";
+        document.getElementById('toggleAnimation').disabled = true;
+        renderer.domElement.style.cursor = 'crosshair';
+      } else {
+        document.getElementById('toggleAnimation').disabled = false;
+        renderer.domElement.style.cursor = 'default';
+      }
+    });
+
     document.getElementById('resetView').addEventListener('click', () => {
       camera.position.set(0, 20, 40);
       controls.target.set(0, 0, 0);
@@ -875,6 +897,82 @@
     document.getElementById('speedControl').addEventListener('input', (e) => {
       speedFactor = parseFloat(e.target.value);
     });
+
+    // Click handler for placing asteroids
+    function onCanvasClick(event) {
+      if (!freezeMode || userAsteroids.length >= MAX_USER_ASTEROIDS) return;
+
+      // Calculate mouse position in normalized device coordinates
+      const mouse = new THREE.Vector2();
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      // Raycast to find position in 3D space
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      // Use a plane at y=0 for placement
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+
+      if (intersection) {
+        createUserAsteroid(intersection);
+      }
+    }
+
+    function createUserAsteroid(position) {
+      // Create asteroid mesh
+      const radius = 0.2 + Math.random() * 0.2;
+      const geometry = new THREE.DodecahedronGeometry(radius, 0);
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(0.05 + Math.random() * 0.05, 0.4, 0.4 + Math.random() * 0.2),
+        roughness: 0.9,
+        metalness: 0.2,
+        emissive: 0xff4400,
+        emissiveIntensity: 0.3
+      });
+      const asteroid = new THREE.Mesh(geometry, material);
+      asteroid.castShadow = true;
+      asteroid.receiveShadow = true;
+      asteroid.position.copy(position);
+
+      // Random rotation
+      asteroid.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
+      scene.add(asteroid);
+
+      // Calculate initial velocity toward the Sun with some randomness
+      const directionToSun = new THREE.Vector3(0, 0, 0).sub(position).normalize();
+
+      // Add some bias toward the Sun but with variation
+      const speed = 0.1 + Math.random() * 0.1;
+      const velocity = directionToSun.multiplyScalar(speed);
+
+      // Add some perpendicular velocity for more interesting trajectories
+      const perpendicular = new THREE.Vector3(-directionToSun.z, 0, directionToSun.x);
+      velocity.add(perpendicular.multiplyScalar((Math.random() - 0.5) * 0.1));
+
+      // Store asteroid data
+      userAsteroids.push({
+        mesh: asteroid,
+        velocity: velocity,
+        mass: radius * radius * radius, // Mass proportional to volume
+        radius: radius,
+        rotationSpeed: {
+          x: (Math.random() - 0.5) * 0.05,
+          y: (Math.random() - 0.5) * 0.05,
+          z: (Math.random() - 0.5) * 0.05
+        }
+      });
+    }
+
+    // Add click listener
+    renderer.domElement.addEventListener('click', onCanvasClick);
 
     // Labels
     function updateLabels() {
@@ -1097,6 +1195,81 @@
               ringData.mesh.rotation.z += 0.0001 * speedFactor;
             });
           }
+        });
+
+        // Animate user-placed asteroids with physics
+        const asteroidsToRemove = [];
+        userAsteroids.forEach((asteroid, index) => {
+          // Apply gravity from Sun
+          const sunPos = new THREE.Vector3(0, 0, 0);
+          const toSun = new THREE.Vector3().subVectors(sunPos, asteroid.mesh.position);
+          const distanceToSun = toSun.length();
+
+          if (distanceToSun > 0.1) {
+            const sunMass = 1000; // Relative mass of sun
+            const gravityForce = (G * sunMass) / (distanceToSun * distanceToSun);
+            const gravityAccel = toSun.normalize().multiplyScalar(gravityForce);
+            asteroid.velocity.add(gravityAccel.multiplyScalar(speedFactor));
+          }
+
+          // Apply gravity from planets
+          bodies.forEach(body => {
+            if (body.name === "Sun" || body.isMoon) return;
+
+            const planetPos = new THREE.Vector3();
+            if (body.container) {
+              body.container.getWorldPosition(planetPos);
+            } else {
+              body.obj.getWorldPosition(planetPos);
+            }
+
+            const toPlanet = new THREE.Vector3().subVectors(planetPos, asteroid.mesh.position);
+            const distanceToPlanet = toPlanet.length();
+
+            if (distanceToPlanet > 0.1) {
+              // Planet mass based on radius
+              const planetRadius = body.obj.geometry.parameters.radius || 1;
+              const planetMass = planetRadius * planetRadius * planetRadius * 50;
+              const gravityForce = (G * planetMass) / (distanceToPlanet * distanceToPlanet);
+              const gravityAccel = toPlanet.normalize().multiplyScalar(gravityForce);
+              asteroid.velocity.add(gravityAccel.multiplyScalar(speedFactor));
+            }
+
+            // Check for collision with planet
+            const planetRadius = body.obj.geometry.parameters.radius || 1;
+            if (distanceToPlanet < planetRadius + asteroid.radius) {
+              asteroidsToRemove.push(index);
+              return;
+            }
+          });
+
+          // Check for collision with Sun
+          if (distanceToSun < 3 + asteroid.radius) {
+            asteroidsToRemove.push(index);
+            return;
+          }
+
+          // Check for escape
+          if (distanceToSun > ESCAPE_DISTANCE) {
+            asteroidsToRemove.push(index);
+            return;
+          }
+
+          // Update position
+          asteroid.mesh.position.add(asteroid.velocity.clone().multiplyScalar(speedFactor));
+
+          // Rotate asteroid
+          asteroid.mesh.rotation.x += asteroid.rotationSpeed.x * speedFactor;
+          asteroid.mesh.rotation.y += asteroid.rotationSpeed.y * speedFactor;
+          asteroid.mesh.rotation.z += asteroid.rotationSpeed.z * speedFactor;
+        });
+
+        // Remove collided/escaped asteroids
+        asteroidsToRemove.reverse().forEach(index => {
+          scene.remove(userAsteroids[index].mesh);
+          userAsteroids[index].mesh.geometry.dispose();
+          userAsteroids[index].mesh.material.dispose();
+          userAsteroids.splice(index, 1);
         });
       }
 
