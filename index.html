@@ -812,10 +812,20 @@
       // Create a grid-like appearance
       const gridHelper = new THREE.Group();
       
+      // Choose color based on plane angle for visual distinction
+      let planeColor;
+      switch(angle) {
+        case 0:   planeColor = 0x00ffff; break; // Cyan for North-South
+        case 90:  planeColor = 0xff00ff; break; // Magenta for East-West
+        case 45:  planeColor = 0xffff00; break; // Yellow for 45° diagonal
+        case 135: planeColor = 0x00ff00; break; // Green for 135° diagonal
+        default:  planeColor = 0x00ffff;
+      }
+      
       // Main disc with improved visibility
       const discGeometry = new THREE.CircleGeometry(planeRadius, segments);
       const discMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ffff,
+        color: planeColor,
         transparent: true,
         opacity: 0.25,
         side: THREE.DoubleSide,
@@ -836,7 +846,7 @@
           new THREE.Vector3(Math.cos(angle) * planeRadius, Math.sin(angle) * planeRadius, 0)
         ]);
         const lineMaterial = new THREE.LineBasicMaterial({
-          color: 0x00ffff,
+          color: planeColor,
           transparent: true,
           opacity: 0.5,
           linewidth: 2,
@@ -850,7 +860,7 @@
       for (let r = 20; r <= planeRadius; r += 20) {
         const ringGeometry = new THREE.RingGeometry(r - 0.1, r + 0.1, segments);
         const ringMaterial = new THREE.MeshBasicMaterial({
-          color: 0x00ffff,
+          color: planeColor,
           transparent: true,
           opacity: 0.4,
           side: THREE.DoubleSide,
@@ -863,25 +873,26 @@
       gridHelper.add(gridLines);
       
       // Rotate the plane based on the selected angle
-      // North-South (0°): XY plane rotated 90° around X axis
-      // East-West (90°): YZ plane rotated 90° around Y axis
-      // 45° and 135°: diagonal planes
+      // The CircleGeometry is created in the XY plane (default, with normal pointing in +Z direction)
+      // We need to rotate it to match the raycasting plane normals
       
       if (angle === 0) {
-        // North-South: XY plane (vertical, facing Z direction)
-        gridHelper.rotation.x = Math.PI / 2;
+        // North-South: XY plane (vertical, perpendicular to Z axis, normal = (0,0,1))
+        // Default orientation is already XY plane, but we need it vertical
+        // No rotation needed - keep it in XY plane facing Z
+        gridHelper.rotation.set(0, 0, 0);
       } else if (angle === 90) {
-        // East-West: YZ plane (vertical, facing X direction)
-        gridHelper.rotation.x = Math.PI / 2;
-        gridHelper.rotation.z = Math.PI / 2;
+        // East-West: YZ plane (vertical, perpendicular to X axis, normal = (1,0,0))
+        // Rotate from XY plane to YZ plane - rotate 90° around Y axis
+        gridHelper.rotation.y = Math.PI / 2;
       } else if (angle === 45) {
-        // 45° diagonal
-        gridHelper.rotation.x = Math.PI / 2;
-        gridHelper.rotation.z = Math.PI / 4;
+        // 45° diagonal (normal = (1,0,1).normalized())
+        // Rotate 45° around Y axis from the XY plane
+        gridHelper.rotation.y = Math.PI / 4;
       } else if (angle === 135) {
-        // 135° diagonal (270° in the problem statement)
-        gridHelper.rotation.x = Math.PI / 2;
-        gridHelper.rotation.z = (Math.PI * 3) / 4;
+        // 135° diagonal (normal = (-1,0,1).normalized())
+        // Rotate 135° around Y axis from the XY plane
+        gridHelper.rotation.y = (Math.PI * 3) / 4;
       }
       
       placementPlaneHelper = gridHelper;
