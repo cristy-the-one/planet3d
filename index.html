@@ -342,10 +342,12 @@
 
     // Core sun
     const sunGeometry = new THREE.SphereGeometry(3, 64, 64);
-    const sunCoreMaterial = new THREE.MeshBasicMaterial({
+    const sunCoreMaterial = new THREE.MeshStandardMaterial({
       color: 0xffff00,
       emissive: 0xffff00,
-      emissiveIntensity: 2
+      emissiveIntensity: 2,
+      roughness: 1.0,
+      metalness: 0.0
     });
     const sun = new THREE.Mesh(sunGeometry, sunCoreMaterial);
     sunGroup.add(sun);
@@ -726,8 +728,8 @@
       // Create multiple orbital rings
       const numRings = 8; // Number of orbital planes
       const satellitesPerRing = 30; // Satellites per ring
-      const baseOrbitRadius = 0.3; // Starting orbit radius (closer to Earth)
-      const orbitSpacing = 0.05; // Spacing between rings (tighter)
+      const baseOrbitRadius = 1.2; // Starting orbit radius (visible distance from Earth)
+      const orbitSpacing = 0.15; // Spacing between rings
 
       for (let ring = 0; ring < numRings; ring++) {
         const orbitRadius = baseOrbitRadius + (ring * orbitSpacing);
