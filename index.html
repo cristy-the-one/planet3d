@@ -1068,14 +1068,14 @@
     const spaceDust = new THREE.Points(dustGeometry, dustMaterial);
     scene.add(spaceDust);
 
-    // Create skybox sphere with space texture
-    const skyboxGeometry = new THREE.SphereGeometry(1200, 64, 64);
-    const spaceTexture = new THREE.TextureLoader().load('space.jpg');
+    // Create skybox sphere with stars texture
+    const skyboxGeometry = new THREE.SphereGeometry(1500, 64, 64);
+    const starsTexture = new THREE.TextureLoader().load('StarsTexture.jpeg');
     const skyboxMaterial = new THREE.MeshBasicMaterial({
-      map: spaceTexture,
+      map: starsTexture,
       side: THREE.BackSide, // Render on the inside of the sphere
-      transparent: true,
-      opacity: 0.8
+      transparent: false,
+      opacity: 1.0
     });
     const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
     scene.add(skybox);
@@ -1097,6 +1097,10 @@
       Neptune: textureLoader.load('neptune.jpg'),
       Moon: textureLoader.load('moon.jpg')
     };
+    
+    // Load Saturn rings texture
+    const saturnRingsTexture = textureLoader.load('SaturnRingsTexture.png');
+    
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0xa5a5a5,
       transparent: true,
@@ -1365,16 +1369,31 @@
             ringData.outerRadius,
             128
           );
-          const ringMaterial = new THREE.MeshStandardMaterial({
-            color: ringData.color,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: ringData.opacity,
-            emissive: ringData.color,
-            emissiveIntensity: 0.1,
-            metalness: 0.3,
-            roughness: 0.7
-          });
+          
+          // Use texture for Saturn rings, otherwise use color
+          let ringMaterial;
+          if (data.name === "Saturn") {
+            ringMaterial = new THREE.MeshStandardMaterial({
+              map: saturnRingsTexture,
+              side: THREE.DoubleSide,
+              transparent: true,
+              opacity: ringData.opacity,
+              metalness: 0.3,
+              roughness: 0.7
+            });
+          } else {
+            ringMaterial = new THREE.MeshStandardMaterial({
+              color: ringData.color,
+              side: THREE.DoubleSide,
+              transparent: true,
+              opacity: ringData.opacity,
+              emissive: ringData.color,
+              emissiveIntensity: 0.1,
+              metalness: 0.3,
+              roughness: 0.7
+            });
+          }
+          
           const ring = new THREE.Mesh(ringGeometry, ringMaterial);
           ring.rotation.x = Math.PI / 2;
           planet.add(ring);
