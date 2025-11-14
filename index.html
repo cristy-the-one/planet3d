@@ -891,8 +891,8 @@
         gridHelper.rotation.y = Math.PI / 4;
       } else if (angle === 135) {
         // 135° diagonal (normal = (-1,0,1).normalized())
-        // Rotate 135° around Y axis from the XY plane
-        gridHelper.rotation.y = (Math.PI * 3) / 4;
+        // Rotate -45° around Y axis from the XY plane (or equivalently 315°)
+        gridHelper.rotation.y = -Math.PI / 4;
       }
       
       placementPlaneHelper = gridHelper;
