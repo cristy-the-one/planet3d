@@ -1129,8 +1129,19 @@
     const sunMaterial = createHandDrawnMaterial(0xffeb3b);
     const planetMaterial = (color) => createHandDrawnMaterial(color);
 
-    // Texture for Earth skin
-    const earthTexture = new THREE.TextureLoader().load('IMG_3077.jpeg');
+    // Load all planet textures
+    const textureLoader = new THREE.TextureLoader();
+    const planetTextures = {
+      Mercury: textureLoader.load('mercury.jpg'),
+      Venus: textureLoader.load('venus.jpg'),
+      Earth: textureLoader.load('earth.jpeg'),
+      Mars: textureLoader.load('mars.jpg'),
+      Jupiter: textureLoader.load('jupiter.jpg'),
+      Saturn: textureLoader.load('saturn.jpg'),
+      Uranus: textureLoader.load('uranus.jpg'),
+      Neptune: textureLoader.load('neptune.jpg'),
+      Moon: textureLoader.load('moon.jpg')
+    };
     const orbitMaterial = new THREE.LineBasicMaterial({
       color: 0xa5a5a5,
       transparent: true,
@@ -1288,9 +1299,10 @@
     planetsData.forEach(data => {
       const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
       let material;
-      if (data.name === "Earth") {
+      // Use texture if available, otherwise use color
+      if (planetTextures[data.name]) {
         material = new THREE.MeshStandardMaterial({
-          map: earthTexture,
+          map: planetTextures[data.name],
           metalness: 0.2,
           roughness: 0.8
         });
@@ -1440,7 +1452,17 @@
       if (data.moons && data.moons.length > 0) {
         data.moons.forEach(moonData => {
           const moonGeometry = new THREE.SphereGeometry(moonData.radius, 32, 32);
-          const moonMaterial = planetMaterial(moonData.color);
+          let moonMaterial;
+          // Use Moon texture for Earth's Moon
+          if (data.name === "Earth" && moonData.name === "Moon") {
+            moonMaterial = new THREE.MeshStandardMaterial({
+              map: planetTextures.Moon,
+              metalness: 0.1,
+              roughness: 0.9
+            });
+          } else {
+            moonMaterial = planetMaterial(moonData.color);
+          }
           const moon = new THREE.Mesh(moonGeometry, moonMaterial);
           moon.castShadow = moon.receiveShadow = true;
 
