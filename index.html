@@ -99,6 +99,72 @@
       background-color: #000;
       color: #fff;
     }
+
+    input[type="file"] {
+      font-family: 'Indie Flower', cursive;
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 1px solid #888;
+      color: #fff;
+      border-radius: 8px;
+      padding: 5px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button {
+      font-family: 'Indie Flower', cursive;
+      background-color: rgba(255, 255, 255, 0.3);
+      border: 1px solid #888;
+      color: #fff;
+      border-radius: 5px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    #audioControls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      font-family: 'Indie Flower', cursive;
+      color: #fff;
+      max-width: 250px;
+    }
+
+    .audio-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .audio-section:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .volume-control label {
+      font-size: 12px;
+      min-width: 60px;
+    }
+
+    .volume-control input[type="range"] {
+      flex: 1;
+    }
   </style>
 </head>
 
@@ -130,7 +196,553 @@
     </div>
   </div>
 
+  <div id="audioControls">
+    <div style="font-weight: bold; margin-bottom: 8px;">🎵 Audio Controls</div>
+    
+    <div class="audio-section">
+      <button id="toggleAudio" style="width: 100%;">Start Audio</button>
+    </div>
+
+    <div class="audio-section">
+      <div class="volume-control">
+        <label>Master:</label>
+        <input type="range" id="masterVolume" min="0" max="100" value="50">
+      </div>
+    </div>
+
+    <div class="audio-section">
+      <div style="font-size: 12px; margin-bottom: 5px;">Background:</div>
+      <select id="ambientType" style="width: 100%; font-size: 12px;">
+        <option value="off">Off</option>
+        <option value="white">White Noise</option>
+        <option value="pink" selected>Pink Noise</option>
+        <option value="celestial">Celestial</option>
+      </select>
+      <div class="volume-control">
+        <label>Volume:</label>
+        <input type="range" id="ambientVolume" min="0" max="100" value="30">
+      </div>
+    </div>
+
+    <div class="audio-section">
+      <div style="font-size: 12px; margin-bottom: 5px;">Custom Loop:</div>
+      <input type="file" id="customAudioFile" accept="audio/*" style="width: 100%; font-size: 10px;">
+      <div class="volume-control">
+        <label>Volume:</label>
+        <input type="range" id="customVolume" min="0" max="100" value="50">
+      </div>
+    </div>
+
+    <div class="audio-section">
+      <div style="font-size: 12px; margin-bottom: 5px;">Spatial Audio:</div>
+      <label style="font-size: 11px; display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="spatialAudioEnabled" checked>
+        Enable for objects
+      </label>
+      <div class="volume-control">
+        <label>Volume:</label>
+        <input type="range" id="spatialVolume" min="0" max="100" value="40">
+      </div>
+    </div>
+  </div>
+
   <script>
+    // =============================================================================
+    // AUDIO SYSTEM - Immersive Celestial Soundscape
+    // =============================================================================
+    
+    class CelestialAudioSystem {
+      constructor() {
+        this.audioContext = null;
+        this.isInitialized = false;
+        this.isPlaying = false;
+        
+        // Audio nodes
+        this.masterGain = null;
+        this.ambientGain = null;
+        this.customGain = null;
+        this.spatialGain = null;
+        
+        // Noise generators
+        this.whiteNoiseNode = null;
+        this.pinkNoiseNode = null;
+        this.celestialNode = null;
+        this.currentAmbientNode = null;
+        
+        // Custom audio
+        this.customAudioElement = null;
+        this.customSourceNode = null;
+        
+        // Spatial audio
+        this.spatialSources = new Map(); // Track spatial audio sources for objects
+        
+        // Settings
+        this.ambientType = 'pink';
+        this.spatialEnabled = true;
+      }
+      
+      async initialize() {
+        if (this.isInitialized) return;
+        
+        try {
+          // Create audio context
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          
+          // Create master gain (output)
+          this.masterGain = this.audioContext.createGain();
+          this.masterGain.gain.value = 0.5;
+          this.masterGain.connect(this.audioContext.destination);
+          
+          // Create gain nodes for different audio types
+          this.ambientGain = this.audioContext.createGain();
+          this.ambientGain.gain.value = 0.3;
+          this.ambientGain.connect(this.masterGain);
+          
+          this.customGain = this.audioContext.createGain();
+          this.customGain.gain.value = 0.5;
+          this.customGain.connect(this.masterGain);
+          
+          this.spatialGain = this.audioContext.createGain();
+          this.spatialGain.gain.value = 0.4;
+          this.spatialGain.connect(this.masterGain);
+          
+          // Create noise generators
+          this.createNoiseGenerators();
+          
+          this.isInitialized = true;
+          console.log('✨ Celestial audio system initialized');
+          
+        } catch (error) {
+          console.error('Failed to initialize audio system:', error);
+        }
+      }
+      
+      createNoiseGenerators() {
+        // White noise generator
+        this.whiteNoiseNode = this.createWhiteNoise();
+        
+        // Pink noise generator (more pleasant, like ocean waves)
+        this.pinkNoiseNode = this.createPinkNoise();
+        
+        // Celestial ambient (layered synthesis)
+        this.celestialNode = this.createCelestialAmbient();
+      }
+      
+      createWhiteNoise() {
+        const bufferSize = 2 * this.audioContext.sampleRate;
+        const noiseBuffer = this.audioContext.createBuffer(2, bufferSize, this.audioContext.sampleRate);
+        
+        for (let channel = 0; channel < 2; channel++) {
+          const output = noiseBuffer.getChannelData(channel);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+        }
+        
+        const whiteNoise = this.audioContext.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+        
+        // Low-pass filter to make it less harsh
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+        
+        whiteNoise.connect(filter);
+        
+        return { source: whiteNoise, filter: filter };
+      }
+      
+      createPinkNoise() {
+        const bufferSize = 2 * this.audioContext.sampleRate;
+        const noiseBuffer = this.audioContext.createBuffer(2, bufferSize, this.audioContext.sampleRate);
+        
+        // Pink noise generation using Paul Kellet's algorithm
+        for (let channel = 0; channel < 2; channel++) {
+          const output = noiseBuffer.getChannelData(channel);
+          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+          
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+            b6 = white * 0.115926;
+          }
+        }
+        
+        const pinkNoise = this.audioContext.createBufferSource();
+        pinkNoise.buffer = noiseBuffer;
+        pinkNoise.loop = true;
+        
+        // Gentle low-pass filter for smoothness
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 0.5;
+        
+        pinkNoise.connect(filter);
+        
+        return { source: pinkNoise, filter: filter };
+      }
+      
+      createCelestialAmbient() {
+        // Create a celestial drone using multiple oscillators
+        const oscillators = [];
+        const gains = [];
+        const merger = this.audioContext.createChannelMerger(2);
+        
+        // Fundamental frequencies for a cosmic, ethereal sound
+        const frequencies = [55, 82.5, 110, 165, 220]; // A1, E2, A2, E3, A3 - perfect fifths
+        
+        frequencies.forEach((freq, index) => {
+          const osc = this.audioContext.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          
+          const gain = this.audioContext.createGain();
+          gain.gain.value = 0.03 / (index + 1); // Quieter harmonics
+          
+          // Add slow LFO for movement
+          const lfo = this.audioContext.createOscillator();
+          lfo.type = 'sine';
+          lfo.frequency.value = 0.1 + index * 0.05;
+          
+          const lfoGain = this.audioContext.createGain();
+          lfoGain.gain.value = 0.01;
+          
+          lfo.connect(lfoGain);
+          lfoGain.connect(gain.gain);
+          
+          osc.connect(gain);
+          
+          // Pan slightly for stereo width
+          const panner = this.audioContext.createStereoPanner();
+          panner.pan.value = (index % 2 === 0 ? -0.3 : 0.3) * (index / frequencies.length);
+          
+          gain.connect(panner);
+          panner.connect(merger);
+          
+          oscillators.push(osc);
+          gains.push(gain);
+          
+          lfo.start();
+        });
+        
+        // Add a gentle filter sweep
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800;
+        filter.Q.value = 1;
+        
+        // LFO for filter
+        const filterLfo = this.audioContext.createOscillator();
+        filterLfo.type = 'sine';
+        filterLfo.frequency.value = 0.07;
+        
+        const filterLfoGain = this.audioContext.createGain();
+        filterLfoGain.gain.value = 300;
+        
+        filterLfo.connect(filterLfoGain);
+        filterLfoGain.connect(filter.frequency);
+        
+        merger.connect(filter);
+        
+        filterLfo.start();
+        
+        return { oscillators, gains, filter, filterLfo };
+      }
+      
+      setAmbientType(type) {
+        this.ambientType = type;
+        if (this.isPlaying) {
+          this.stopAmbient();
+          if (type !== 'off') {
+            this.startAmbient();
+          }
+        }
+      }
+      
+      startAmbient() {
+        if (!this.isInitialized || this.currentAmbientNode) return;
+        
+        try {
+          switch (this.ambientType) {
+            case 'white':
+              this.whiteNoiseNode.source.start(0);
+              this.whiteNoiseNode.filter.connect(this.ambientGain);
+              this.currentAmbientNode = this.whiteNoiseNode;
+              break;
+              
+            case 'pink':
+              this.pinkNoiseNode.source.start(0);
+              this.pinkNoiseNode.filter.connect(this.ambientGain);
+              this.currentAmbientNode = this.pinkNoiseNode;
+              break;
+              
+            case 'celestial':
+              this.celestialNode.oscillators.forEach(osc => osc.start(0));
+              this.celestialNode.filter.connect(this.ambientGain);
+              this.currentAmbientNode = this.celestialNode;
+              break;
+          }
+        } catch (error) {
+          console.error('Error starting ambient audio:', error);
+        }
+      }
+      
+      stopAmbient() {
+        if (!this.currentAmbientNode) return;
+        
+        try {
+          if (this.currentAmbientNode === this.whiteNoiseNode) {
+            this.whiteNoiseNode.filter.disconnect();
+            this.whiteNoiseNode.source.stop();
+            this.whiteNoiseNode = this.createWhiteNoise();
+          } else if (this.currentAmbientNode === this.pinkNoiseNode) {
+            this.pinkNoiseNode.filter.disconnect();
+            this.pinkNoiseNode.source.stop();
+            this.pinkNoiseNode = this.createPinkNoise();
+          } else if (this.currentAmbientNode === this.celestialNode) {
+            this.celestialNode.filter.disconnect();
+            this.celestialNode.oscillators.forEach(osc => osc.stop());
+            this.celestialNode = this.createCelestialAmbient();
+          }
+          
+          this.currentAmbientNode = null;
+        } catch (error) {
+          console.error('Error stopping ambient audio:', error);
+        }
+      }
+      
+      loadCustomAudio(file) {
+        if (!this.isInitialized) return;
+        
+        // Stop existing custom audio
+        this.stopCustomAudio();
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.audioContext.decodeAudioData(e.target.result, (buffer) => {
+            this.customAudioElement = buffer;
+            if (this.isPlaying) {
+              this.playCustomAudio();
+            }
+            console.log('✨ Custom audio loaded');
+          }, (error) => {
+            console.error('Error decoding audio:', error);
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      
+      playCustomAudio() {
+        if (!this.customAudioElement || this.customSourceNode) return;
+        
+        try {
+          this.customSourceNode = this.audioContext.createBufferSource();
+          this.customSourceNode.buffer = this.customAudioElement;
+          this.customSourceNode.loop = true;
+          this.customSourceNode.connect(this.customGain);
+          this.customSourceNode.start(0);
+        } catch (error) {
+          console.error('Error playing custom audio:', error);
+        }
+      }
+      
+      stopCustomAudio() {
+        if (this.customSourceNode) {
+          try {
+            this.customSourceNode.stop();
+            this.customSourceNode.disconnect();
+          } catch (error) {
+            // Ignore errors when stopping
+          }
+          this.customSourceNode = null;
+        }
+      }
+      
+      // Spatial audio for nearby objects
+      createSpatialSound(objectId, distance, pan) {
+        if (!this.isInitialized || !this.spatialEnabled) return;
+        
+        // Check if we already have a source for this object
+        let spatialSource = this.spatialSources.get(objectId);
+        
+        if (!spatialSource) {
+          // Create a subtle whoosh/hum sound
+          const osc = this.audioContext.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = 80 + Math.random() * 40; // Low frequency hum
+          
+          const gainNode = this.audioContext.createGain();
+          gainNode.gain.value = 0;
+          
+          const panner = this.audioContext.createStereoPanner();
+          
+          osc.connect(gainNode);
+          gainNode.connect(panner);
+          panner.connect(this.spatialGain);
+          
+          osc.start();
+          
+          spatialSource = { osc, gainNode, panner, lastUpdate: Date.now() };
+          this.spatialSources.set(objectId, spatialSource);
+        }
+        
+        // Update spatial parameters based on distance and position
+        const maxDistance = 30; // Objects closer than this can be heard
+        const minDistance = 5;  // Minimum distance for maximum volume
+        
+        if (distance < maxDistance) {
+          // Calculate volume based on distance (inverse square law, but clamped)
+          let volume = 0;
+          if (distance < minDistance) {
+            volume = 0.15; // Maximum volume
+          } else {
+            volume = 0.15 * Math.pow(minDistance / distance, 2);
+          }
+          
+          // Very subtle - celestial ambience
+          volume *= 0.3;
+          
+          // Smooth volume changes
+          spatialSource.gainNode.gain.linearRampToValueAtTime(
+            volume,
+            this.audioContext.currentTime + 0.1
+          );
+          
+          // Binaural panning (-1 left, 1 right)
+          spatialSource.panner.pan.linearRampToValueAtTime(
+            Math.max(-1, Math.min(1, pan)),
+            this.audioContext.currentTime + 0.1
+          );
+          
+          // Vary frequency slightly based on distance (Doppler-like effect, subtle)
+          const freqVariation = 1 - (distance / maxDistance) * 0.1;
+          spatialSource.osc.frequency.linearRampToValueAtTime(
+            (80 + Math.random() * 20) * freqVariation,
+            this.audioContext.currentTime + 0.5
+          );
+        } else {
+          // Fade out if too far
+          spatialSource.gainNode.gain.linearRampToValueAtTime(
+            0,
+            this.audioContext.currentTime + 0.2
+          );
+        }
+        
+        spatialSource.lastUpdate = Date.now();
+      }
+      
+      // Clean up old spatial sources
+      cleanupSpatialSources() {
+        const now = Date.now();
+        const timeout = 2000; // Remove sources not updated in 2 seconds
+        
+        for (const [objectId, source] of this.spatialSources.entries()) {
+          if (now - source.lastUpdate > timeout) {
+            try {
+              source.osc.stop();
+              source.osc.disconnect();
+              source.gainNode.disconnect();
+              source.panner.disconnect();
+            } catch (error) {
+              // Ignore cleanup errors
+            }
+            this.spatialSources.delete(objectId);
+          }
+        }
+      }
+      
+      setMasterVolume(value) {
+        if (this.masterGain) {
+          this.masterGain.gain.linearRampToValueAtTime(
+            value,
+            this.audioContext.currentTime + 0.1
+          );
+        }
+      }
+      
+      setAmbientVolume(value) {
+        if (this.ambientGain) {
+          this.ambientGain.gain.linearRampToValueAtTime(
+            value,
+            this.audioContext.currentTime + 0.1
+          );
+        }
+      }
+      
+      setCustomVolume(value) {
+        if (this.customGain) {
+          this.customGain.gain.linearRampToValueAtTime(
+            value,
+            this.audioContext.currentTime + 0.1
+          );
+        }
+      }
+      
+      setSpatialVolume(value) {
+        if (this.spatialGain) {
+          this.spatialGain.gain.linearRampToValueAtTime(
+            value,
+            this.audioContext.currentTime + 0.1
+          );
+        }
+      }
+      
+      start() {
+        if (!this.isInitialized || this.isPlaying) return;
+        
+        // Resume audio context (required by browser policies)
+        if (this.audioContext.state === 'suspended') {
+          this.audioContext.resume();
+        }
+        
+        this.isPlaying = true;
+        
+        if (this.ambientType !== 'off') {
+          this.startAmbient();
+        }
+        
+        if (this.customAudioElement) {
+          this.playCustomAudio();
+        }
+      }
+      
+      stop() {
+        if (!this.isPlaying) return;
+        
+        this.isPlaying = false;
+        this.stopAmbient();
+        this.stopCustomAudio();
+        
+        // Clean up all spatial sources
+        for (const [objectId, source] of this.spatialSources.entries()) {
+          try {
+            source.osc.stop();
+            source.osc.disconnect();
+            source.gainNode.disconnect();
+            source.panner.disconnect();
+          } catch (error) {
+            // Ignore cleanup errors
+          }
+        }
+        this.spatialSources.clear();
+      }
+    }
+    
+    // Initialize audio system
+    const audioSystem = new CelestialAudioSystem();
+    
+    // =============================================================================
+    // THREE.JS SCENE SETUP
+    // =============================================================================
+    
     // Initialize Three.js scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000508);
@@ -1217,6 +1829,69 @@
       }
     });
 
+    // =============================================================================
+    // AUDIO CONTROLS
+    // =============================================================================
+    
+    // Toggle audio on/off
+    document.getElementById('toggleAudio').addEventListener('click', async () => {
+      const btn = document.getElementById('toggleAudio');
+      
+      if (!audioSystem.isInitialized) {
+        await audioSystem.initialize();
+      }
+      
+      if (audioSystem.isPlaying) {
+        audioSystem.stop();
+        btn.textContent = 'Start Audio';
+      } else {
+        audioSystem.start();
+        btn.textContent = 'Stop Audio';
+      }
+    });
+    
+    // Master volume control
+    document.getElementById('masterVolume').addEventListener('input', (e) => {
+      const volume = parseFloat(e.target.value) / 100;
+      audioSystem.setMasterVolume(volume);
+    });
+    
+    // Ambient type selector
+    document.getElementById('ambientType').addEventListener('change', (e) => {
+      audioSystem.setAmbientType(e.target.value);
+    });
+    
+    // Ambient volume control
+    document.getElementById('ambientVolume').addEventListener('input', (e) => {
+      const volume = parseFloat(e.target.value) / 100;
+      audioSystem.setAmbientVolume(volume);
+    });
+    
+    // Custom audio file upload
+    document.getElementById('customAudioFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        audioSystem.loadCustomAudio(file);
+      }
+    });
+    
+    // Custom audio volume control
+    document.getElementById('customVolume').addEventListener('input', (e) => {
+      const volume = parseFloat(e.target.value) / 100;
+      audioSystem.setCustomVolume(volume);
+    });
+    
+    // Spatial audio enable/disable
+    document.getElementById('spatialAudioEnabled').addEventListener('change', (e) => {
+      audioSystem.spatialEnabled = e.target.checked;
+    });
+    
+    // Spatial audio volume control
+    document.getElementById('spatialVolume').addEventListener('input', (e) => {
+      const volume = parseFloat(e.target.value) / 100;
+      audioSystem.setSpatialVolume(volume);
+    });
+
     // Click handler for placing asteroids
     function onCanvasClick(event) {
       if (!freezeMode || userAsteroids.length >= MAX_USER_ASTEROIDS) return;
@@ -1662,6 +2337,64 @@
           userAsteroids[index].trail.material.dispose();
           userAsteroids.splice(index, 1);
         });
+      }
+
+      // =============================================================================
+      // SPATIAL AUDIO PROCESSING
+      // =============================================================================
+      
+      if (audioSystem.isPlaying && audioSystem.spatialEnabled) {
+        // Process planets for spatial audio
+        bodies.forEach(body => {
+          if (!body.name || body.name === "Sun") return;
+          
+          const position = new THREE.Vector3();
+          if (body.container) {
+            body.container.getWorldPosition(position);
+          } else {
+            body.obj.getWorldPosition(position);
+          }
+          
+          // Calculate distance from camera
+          const distance = camera.position.distanceTo(position);
+          
+          // Calculate stereo pan based on screen position
+          const screenPos = position.clone().project(camera);
+          const pan = screenPos.x; // -1 (left) to 1 (right)
+          
+          // Create spatial sound for this object
+          audioSystem.createSpatialSound(`planet_${body.name}`, distance, pan);
+        });
+        
+        // Process user asteroids for spatial audio
+        userAsteroids.forEach((asteroid, index) => {
+          const distance = camera.position.distanceTo(asteroid.mesh.position);
+          
+          // Calculate stereo pan
+          const screenPos = asteroid.mesh.position.clone().project(camera);
+          const pan = screenPos.x;
+          
+          // Create spatial sound for this asteroid
+          audioSystem.createSpatialSound(`asteroid_${index}`, distance, pan);
+        });
+        
+        // Process comets for spatial audio
+        comets.forEach((comet, index) => {
+          const cometPos = comet.group.position;
+          const distance = camera.position.distanceTo(cometPos);
+          
+          // Calculate stereo pan
+          const screenPos = cometPos.clone().project(camera);
+          const pan = screenPos.x;
+          
+          // Create spatial sound for this comet
+          audioSystem.createSpatialSound(`comet_${index}`, distance, pan);
+        });
+        
+        // Periodically clean up old spatial sources
+        if (Math.floor(time * 10) % 50 === 0) {
+          audioSystem.cleanupSpatialSources();
+        }
       }
 
       controls.update();
