@@ -44,6 +44,23 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
       font-family: 'Indie Flower', cursive;
       color: #fff;
+      max-width: 250px;
+    }
+
+    .control-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .control-section:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .control-section button {
+      width: 100%;
     }
 
     .planet-label {
@@ -171,23 +188,39 @@
 <body>
   <div id="info">✨ Spectacular Solar System ✨</div>
   <div id="controls">
-    <button id="toggleAnimation">Pause</button>
-    <button id="toggleFreeze">Freeze (Place Asteroids)</button>
-    <button id="resetView">Reset View</button>
-    <button id="toggleSatellites">Satellites: Highly Visible</button>
-    <div class="mt-2">
-      <span class="text-sm">Speed: </span>
-      <input type="range" id="speedControl" min="0" max="2" step="0.05" value="0.5">
+    <div style="font-weight: bold; margin-bottom: 8px;">🎬 Animation Controls</div>
+    
+    <div class="control-section">
+      <button id="toggleAnimation">Pause</button>
     </div>
-    <div class="mt-2">
-      <span class="text-sm">View from: </span>
-      <select id="planetSelector">
+
+    <div class="control-section">
+      <button id="toggleFreeze">Freeze (Place Asteroids)</button>
+    </div>
+
+    <div class="control-section">
+      <button id="resetView">Reset View</button>
+    </div>
+
+    <div class="control-section">
+      <button id="toggleSatellites">Satellites: Highly Visible</button>
+    </div>
+
+    <div class="control-section">
+      <div style="font-size: 12px; margin-bottom: 5px;">Speed:</div>
+      <input type="range" id="speedControl" min="0" max="2" step="0.05" value="0.5" style="width: 100%;">
+    </div>
+
+    <div class="control-section">
+      <div style="font-size: 12px; margin-bottom: 5px;">View from:</div>
+      <select id="planetSelector" style="width: 100%; font-size: 12px;">
         <option value="Sun">Sun</option>
       </select>
     </div>
-    <div id="planeSelector" class="mt-2" style="display: none;">
-      <span class="text-sm">Placement Plane: </span>
-      <select id="planeSelect">
+
+    <div id="planeSelector" class="control-section" style="display: none;">
+      <div style="font-size: 12px; margin-bottom: 5px;">Placement Plane:</div>
+      <select id="planeSelect" style="width: 100%; font-size: 12px;">
         <option value="0">North-South</option>
         <option value="90">East-West</option>
         <option value="45">45° Diagonal</option>
