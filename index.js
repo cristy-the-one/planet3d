@@ -4,7 +4,7 @@
  * The simulation in index.html builds a list of celestial bodies named `bodies`.
  * This helper finds the Earth entry and sets its self rotation so that one
  * orbital period results in roughly 365 rotations. The rotation axis is aligned
- * north–south with the short side of the `IMG_3077.jpeg` texture so the planet
+ * north–south with the short side of the `earth.jpeg` texture so the planet
  * spins correctly relative to its orbital plane.
  */
 function setupEarth(bodies) {
