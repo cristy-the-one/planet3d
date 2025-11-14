@@ -2099,14 +2099,34 @@
       audioSystem.setSpatialVolume(volume);
     });
 
-    // Click handler for placing asteroids
+    // Touch tracking for mobile devices
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    const TAP_THRESHOLD = 10; // pixels - maximum movement to be considered a tap
+    const TAP_TIME_THRESHOLD = 300; // milliseconds - maximum duration to be considered a tap
+
+    // Click/Touch handler for placing asteroids
     function onCanvasClick(event) {
       if (!freezeMode || userAsteroids.length >= MAX_USER_ASTEROIDS) return;
 
-      // Calculate mouse position in normalized device coordinates
+      // Calculate position in normalized device coordinates
       const mouse = new THREE.Vector2();
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      
+      // Handle both mouse and touch events
+      if (event.touches && event.touches.length > 0) {
+        // Touch event
+        mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+      } else if (event.changedTouches && event.changedTouches.length > 0) {
+        // Touch end event
+        mouse.x = (event.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
+      } else {
+        // Mouse event
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      }
 
       // Raycast to find position in 3D space
       const raycaster = new THREE.Raycaster();
@@ -2139,6 +2159,42 @@
 
       if (intersection) {
         createUserAsteroid(intersection);
+      }
+    }
+
+    // Handle touch start - track initial position
+    function onTouchStart(event) {
+      if (!freezeMode) return;
+      
+      if (event.touches && event.touches.length === 1) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+        touchStartTime = Date.now();
+      }
+    }
+
+    // Handle touch end - check if it was a tap and place asteroid
+    function onTouchEnd(event) {
+      if (!freezeMode || userAsteroids.length >= MAX_USER_ASTEROIDS) return;
+      
+      if (event.changedTouches && event.changedTouches.length === 1) {
+        const touchEndX = event.changedTouches[0].clientX;
+        const touchEndY = event.changedTouches[0].clientY;
+        const touchEndTime = Date.now();
+        
+        // Calculate movement distance
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const duration = touchEndTime - touchStartTime;
+        
+        // Check if it was a tap (minimal movement and quick)
+        if (distance < TAP_THRESHOLD && duration < TAP_TIME_THRESHOLD) {
+          // Prevent default to avoid triggering click event as well
+          event.preventDefault();
+          // Place asteroid at tap position
+          onCanvasClick(event);
+        }
       }
     }
 
@@ -2214,8 +2270,12 @@
       });
     }
 
-    // Add click listener
+    // Add click listener for desktop
     renderer.domElement.addEventListener('click', onCanvasClick);
+    
+    // Add touch listeners for mobile devices
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+    renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
 
     // Labels
     function updateLabels() {
