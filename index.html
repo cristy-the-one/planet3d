@@ -726,8 +726,8 @@
       // Create multiple orbital rings
       const numRings = 8; // Number of orbital planes
       const satellitesPerRing = 30; // Satellites per ring
-      const baseOrbitRadius = 0.9; // Starting orbit radius (close to Earth)
-      const orbitSpacing = 0.15; // Spacing between rings
+      const baseOrbitRadius = 0.3; // Starting orbit radius (closer to Earth)
+      const orbitSpacing = 0.05; // Spacing between rings (tighter)
 
       for (let ring = 0; ring < numRings; ring++) {
         const orbitRadius = baseOrbitRadius + (ring * orbitSpacing);
@@ -778,26 +778,26 @@
     function updateSatelliteVisibility() {
       starlinkSatellites.forEach(sat => {
         if (satelliteVisibility === 'highly') {
-          sat.mesh.scale.set(2.5, 2.5, 2.5); // Normal size for high visibility
+          sat.mesh.scale.set(2.8, 2.8, 2.8); // Normal size for high visibility
           sat.mesh.children.forEach(child => {
             if (child.material && child.material.emissive) {
               // Standard emissive intensity
               if (child === sat.mesh.children[0]) { // body
-                child.material.emissiveIntensity = 0.3;
+                child.material.emissiveIntensity = 0.5;
               } else if (child.geometry instanceof THREE.BoxGeometry) { // panels
-                child.material.emissiveIntensity = 0.2;
+                child.material.emissiveIntensity = 0.25;
               }
             }
           });
         } else {
-          sat.mesh.scale.set(1, 1, 1); // Much smaller for slight visibility
+          sat.mesh.scale.set(1.3, 1.3, 1.3); // Much smaller for slight visibility
           sat.mesh.children.forEach(child => {
             if (child.material && child.material.emissive) {
               // Reduced emissive intensity
               if (child === sat.mesh.children[0]) { // body
-                child.material.emissiveIntensity = 0.15;
+                child.material.emissiveIntensity = 0.25;
               } else if (child.geometry instanceof THREE.BoxGeometry) { // panels
-                child.material.emissiveIntensity = 0.1;
+                child.material.emissiveIntensity = 0.15;
               }
             }
           });
