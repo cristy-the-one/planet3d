@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spectacular Solar System</title>
+  <title>Greatest Toy Solar System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -287,11 +287,329 @@
         min-width: 60px;
       }
     }
+  
+    /* =========================================================
+       UI UPGRADE: Glass Observatory + Kid/Nerd Modes + Focus Card
+       ========================================================= */
+    :root{
+      --ui-bg: rgba(8, 12, 20, 0.58);
+      --ui-stroke: rgba(255,255,255,0.14);
+      --ui-glow: rgba(120,180,255,0.35);
+      --ui-glow2: rgba(255,120,220,0.22);
+      --ui-radius: 16px;
+      --ui-scale: 1;
+      --ui-text: rgba(255,255,255,0.92);
+      --ui-muted: rgba(255,255,255,0.72);
+    }
+
+    body{
+      transform-origin: top left;
+    }
+
+    /* top bar */
+    #topBar{
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
+      border-radius: 999px;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-stroke);
+      backdrop-filter: blur(10px) saturate(1.2);
+      -webkit-backdrop-filter: blur(10px) saturate(1.2);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      z-index: 20;
+      color: var(--ui-text);
+      user-select: none;
+    }
+    #topBar .pill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+      border-radius: 999px;
+      border: 1px solid var(--ui-stroke);
+      background: rgba(255,255,255,0.06);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.25) inset;
+    }
+    #topBar .brand{
+      font-family: 'Dancing Script', cursive;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      font-size: calc(18px * var(--ui-scale));
+      text-shadow: 0 0 18px rgba(255,255,255,0.2);
+      padding-right: 6px;
+    }
+    #topBar button, #topBar select{
+      margin: 0;
+      font-size: calc(13px * var(--ui-scale));
+    }
+
+    /* Glass panels (reuse your IDs so existing JS keeps working) */
+    #controls, #audioControls{
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-stroke);
+      border-radius: var(--ui-radius);
+      backdrop-filter: blur(14px) saturate(1.25);
+      -webkit-backdrop-filter: blur(14px) saturate(1.25);
+      box-shadow:
+        0 18px 60px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(255,255,255,0.05) inset,
+        0 0 36px var(--ui-glow);
+    }
+
+    /* subtle animated shimmer */
+    #controls::before, #audioControls::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      border-radius: inherit;
+      pointer-events:none;
+      background: radial-gradient(600px 180px at 10% 10%, rgba(120,180,255,0.10), transparent 55%),
+                  radial-gradient(500px 220px at 90% 15%, rgba(255,120,220,0.08), transparent 60%),
+                  radial-gradient(600px 260px at 50% 110%, rgba(120,255,190,0.06), transparent 60%);
+      filter: blur(2px);
+      opacity: 0.9;
+      mix-blend-mode: screen;
+    }
+
+    #controls, #audioControls{
+      position:absolute;
+      z-index: 10;
+    }
+
+    /* Make headings feel like a console */
+    .control-panel-header{
+      font-size: calc(15px * var(--ui-scale));
+      letter-spacing: 0.3px;
+      color: var(--ui-text);
+      padding: calc(8px * var(--ui-scale)) calc(8px * var(--ui-scale));
+      margin: 0 0 calc(8px * var(--ui-scale)) 0;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    .control-panel-header::after{ opacity: 0.85; }
+
+    .control-section, .audio-section{
+      border-top: 1px solid rgba(255,255,255,0.10);
+    }
+
+    /* Buttons / inputs as "holo controls" */
+    button{
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.25) inset, 0 10px 24px rgba(0,0,0,0.25);
+      border-radius: 12px;
+    }
+    button:hover{
+      background: rgba(255,255,255,0.16);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.18) inset, 0 14px 30px rgba(0,0,0,0.30), 0 0 22px rgba(120,180,255,0.22);
+    }
+    select, input[type="file"]{
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+    }
+
+    /* Focus card (planet info / actions) */
+    #focusCard{
+      position: absolute;
+      right: 20px;
+      top: 70px;
+      width: min(340px, calc(100vw - 40px));
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-stroke);
+      border-radius: var(--ui-radius);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.55), 0 0 36px var(--ui-glow2);
+      color: var(--ui-text);
+      padding: 14px;
+      z-index: 15;
+      display: none;
+    }
+    #focusCard .title{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+    #focusCard .subtitle{
+      color: var(--ui-muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    #focusCard .row{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--ui-muted);
+      padding: 6px 0;
+      border-top: 1px solid rgba(255,255,255,0.10);
+    }
+    #focusCard .actions{
+      display:flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    #focusCard .actions button{
+      flex: 1;
+      margin: 0;
+      padding: 8px 10px;
+    }
+
+    /* Kid vs Nerd mode */
+    body.kid-mode .advanced { display: none !important; }
+    body.kid-mode #audioControls { display: none; } /* kids: keep it simple; they can toggle Sound in top bar */
+    body.kid-mode #controls { max-width: 260px; }
+    body.kid-mode #info { opacity: 0.0; } /* top bar replaces it */
+
+    /* UI scale */
+    .ui-scale-80 { --ui-scale: 0.85; }
+    .ui-scale-100{ --ui-scale: 1; }
+    .ui-scale-120{ --ui-scale: 1.15; }
+    .ui-scale-140{ --ui-scale: 1.30; }
+
+    /* Mobile tweaks: keep focus card from covering everything */
+    @media (max-width: 768px){
+      #focusCard{
+        right: 10px;
+        left: 10px;
+        top: auto;
+        bottom: 10px;
+        width: auto;
+      }
+      #topBar{
+        top: 8px;
+        gap: 8px;
+        padding: 8px 10px;
+        width: calc(100vw - 16px);
+        max-width: 740px;
+      }
+      #topBar .brand{
+        font-size: 16px;
+      }
+    }
+
+  
+    /* Guided Tour overlay */
+    #tourOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      z-index: 80;
+      display:none;
+    }
+    #tourSpot{
+      position:absolute;
+      border-radius: 14px;
+      outline: 3px solid rgba(180,220,255,0.9);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 10px 40px rgba(0,0,0,0.6);
+      pointer-events:none;
+      transition: all .18s ease;
+    }
+    #tourCard{
+      position:absolute;
+      max-width: 360px;
+      background: rgba(10,14,20,0.72);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      color:#fff;
+      box-shadow: 0 16px 60px rgba(0,0,0,0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: all .18s ease;
+    }
+    #tourCard .tTitle{ font-weight: 800; letter-spacing: .2px; margin-bottom: 6px; }
+    #tourCard .tBody{ font-size: 13px; opacity: .92; line-height: 1.25; }
+    #tourCard .tBtns{ display:flex; gap:8px; margin-top:10px; }
+    #tourCard .tBtns button{ flex:1; margin:0; padding:8px 10px; }
+    #tourCard .tMeta{ margin-top:8px; font-size: 12px; opacity:.75; display:flex; justify-content:space-between; }
+
   </style>
 </head>
 
 <body>
   <div id="info">✨ Spectacular Solar System ✨</div>
+
+  <div id="topBar" aria-label="Toy Solar System Controls">
+    <div class="brand">✨ Toy Solar System</div>
+
+    <div class="pill">
+      <button id="modeToggle" title="Switch between Kid Mode and Nerd Mode">🧒 Kid</button>
+      <button id="soundQuickToggle" title="Show/Hide Sound Lab">🔊 Sound</button>
+      <button id="tourBtn" title="Guided Tour">🗺️ Tour</button>
+    </div>
+
+    <div class="pill">
+      <label for="presetSelect" style="font-size:12px; opacity:.85;">⭐ Preset</label>
+      <select id="presetSelect">
+        <option value="default" selected>Default</option>
+        <option value="wow">WOW (Glow + Comets)</option>
+        <option value="museum">Museum (Calm + Clear)</option>
+        <option value="nightride">Night Ride (Moody)</option>
+      </select>
+    </div>
+
+    <div class="pill">
+      <label for="uiScale" style="font-size:12px; opacity:.85;">UI</label>
+      <select id="uiScale">
+        <option value="80">S</option>
+        <option value="100" selected>M</option>
+        <option value="120">L</option>
+        <option value="140">XL</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="focusCard" role="dialog" aria-label="Planet Focus">
+    <div class="title">
+      <span id="focusName">Planet</span>
+      <button id="focusClose" title="Close" style="flex:0 0 auto; padding:6px 10px;">✕</button>
+    </div>
+    <div class="subtitle" id="focusFact">Tap a planet (or the selector) to focus. Try the Tour for a guided demo.</div>
+
+    <div class="row"><span>Orbit radius</span><span id="focusOrbit">—</span></div>
+    <div class="row"><span>Speed</span><span id="focusSpeed">—</span></div>
+    <div class="row"><span>Moons</span><span id="focusMoons">—</span></div>
+
+    <div class="actions">
+      <button id="focusFollow">🎥 Follow</button>
+      <button id="focusReset">🧭 Reset</button>
+    </div>
+  </div>
+
+  <div id="tourOverlay" aria-label="Guided Tour" role="dialog" aria-modal="true">
+    <div id="tourSpot"></div>
+    <div id="tourCard">
+      <div class="tTitle" id="tourTitle">Tour</div>
+      <div class="tBody" id="tourBody">…</div>
+      <div class="tBtns">
+        <button id="tourBack">◀ Back</button>
+        <button id="tourNext">Next ▶</button>
+        <button id="tourSkip" title="End tour">✕</button>
+      </div>
+      <div class="tMeta">
+        <span id="tourStep">1/1</span>
+        <span>Tip: you can still orbit/zoom</span>
+      </div>
+    </div>
+  </div>
+
   <div id="controls">
     <div class="control-panel-header" id="animationControlsHeader">🎬 Animation Controls</div>
     <div class="control-panel-content" id="animationControlsContent">
@@ -308,7 +626,7 @@
       <button id="resetView">Reset View</button>
     </div>
 
-    <div class="control-section">
+    <div class="control-section advanced">
       <button id="toggleSatellites">Satellites: Highly Visible</button>
     </div>
 
@@ -317,14 +635,14 @@
       <input type="range" id="speedControl" min="0" max="2" step="0.05" value="0.5" style="width: 100%;">
     </div>
 
-    <div class="control-section">
+    <div class="control-section advanced">
       <div style="font-size: 12px; margin-bottom: 5px;">View from:</div>
       <select id="planetSelector" style="width: 100%; font-size: 12px;">
         <option value="Sun">Sun</option>
       </select>
     </div>
 
-    <div id="planeSelector" class="control-section" style="display: none;">
+    <div id="planeSelector" class="control-section advanced" style="display: none;">
       <div style="font-size: 12px; margin-bottom: 5px;">Placement Plane:</div>
       <select id="planeSelect" style="width: 100%; font-size: 12px;">
         <option value="0">North-South</option>
@@ -344,14 +662,14 @@
       <button id="toggleAudio" style="width: 100%;">Start Audio</button>
     </div>
 
-    <div class="audio-section">
+    <div class="audio-section advanced">
       <div class="volume-control">
         <label>Master:</label>
         <input type="range" id="masterVolume" min="0" max="100" value="50">
       </div>
     </div>
 
-    <div class="audio-section">
+    <div class="audio-section advanced">
       <div style="font-size: 12px; margin-bottom: 5px;">Background:</div>
       <select id="ambientType" style="width: 100%; font-size: 12px;">
         <option value="off">Off</option>
@@ -365,7 +683,7 @@
       </div>
     </div>
 
-    <div class="audio-section">
+    <div class="audio-section advanced">
       <div style="font-size: 12px; margin-bottom: 5px;">Custom Loop:</div>
       <input type="file" id="customAudioFile" accept="audio/*" style="width: 100%; font-size: 10px;">
       <div class="volume-control">
@@ -374,7 +692,7 @@
       </div>
     </div>
 
-    <div class="audio-section">
+    <div class="audio-section advanced">
       <div style="font-size: 12px; margin-bottom: 5px;">Spatial Audio:</div>
       <label style="font-size: 11px; display: flex; align-items: center; gap: 5px;">
         <input type="checkbox" id="spatialAudioEnabled" checked>
@@ -438,6 +756,116 @@
       }
     })();
     
+    
+    // =============================================================================
+    // UI UPGRADE LAYER (Kid/Nerd mode, presets, focus card, UI scale)
+    // =============================================================================
+    (function(){
+      const body = document.body;
+
+      // Persist simple preferences
+      const savedMode = localStorage.getItem('uiMode') || 'kid';
+      const savedScale = localStorage.getItem('uiScale') || '100';
+
+      function applyScale(v){
+        body.classList.remove('ui-scale-80','ui-scale-100','ui-scale-120','ui-scale-140');
+        body.classList.add(`ui-scale-${v}`);
+      }
+      function setMode(mode){
+        const btn = document.getElementById('modeToggle');
+        const isKid = (mode === 'kid');
+        body.classList.toggle('kid-mode', isKid);
+        if (btn) btn.textContent = isKid ? "🧒 Kid" : "🧠 Nerd";
+        localStorage.setItem('uiMode', mode);
+      }
+
+      // Init mode + scale
+      applyScale(savedScale);
+      setMode(savedMode);
+
+      // Wire UI scale
+      const uiScale = document.getElementById('uiScale');
+      if (uiScale){
+        uiScale.value = savedScale;
+        uiScale.addEventListener('change', (e)=>{
+          const v = e.target.value;
+          applyScale(v);
+          localStorage.setItem('uiScale', v);
+        });
+      }
+
+      // Sound quick toggle (show/hide audio panel even in nerd mode)
+      const soundBtn = document.getElementById('soundQuickToggle');
+      const audioPanel = document.getElementById('audioControls');
+      if (soundBtn && audioPanel){
+        soundBtn.addEventListener('click', ()=>{
+          const isHidden = audioPanel.style.display === 'none';
+          audioPanel.style.display = isHidden ? '' : 'none';
+        });
+      }
+
+      // Mode toggle
+      const modeBtn = document.getElementById('modeToggle');
+      if (modeBtn){
+        modeBtn.addEventListener('click', ()=>{
+          const next = body.classList.contains('kid-mode') ? 'nerd' : 'kid';
+          setMode(next);
+          // In kid mode, ensure audio panel is hidden unless explicitly shown
+          if (next === 'kid' && audioPanel) audioPanel.style.display = 'none';
+          if (next === 'nerd' && audioPanel) audioPanel.style.display = '';
+        });
+      }
+
+      // Focus card helpers (populated later once bodies exist)
+      const focus = {
+        card: document.getElementById('focusCard'),
+        name: document.getElementById('focusName'),
+        fact: document.getElementById('focusFact'),
+        orbit: document.getElementById('focusOrbit'),
+        speed: document.getElementById('focusSpeed'),
+        moons: document.getElementById('focusMoons'),
+        close: document.getElementById('focusClose'),
+        follow: document.getElementById('focusFollow'),
+        reset: document.getElementById('focusReset'),
+      };
+      if (focus.close && focus.card){
+        focus.close.addEventListener('click', ()=> focus.card.style.display = 'none');
+      }
+
+      // Presets hook (actual rendering knobs set later once renderer/composer exist)
+      window.__uiPresetRequested = (localStorage.getItem('preset') || 'default');
+      const presetSelect = document.getElementById('presetSelect');
+      if (presetSelect){
+        presetSelect.value = window.__uiPresetRequested;
+        presetSelect.addEventListener('change', (e)=>{
+          window.__uiPresetRequested = e.target.value;
+          localStorage.setItem('preset', window.__uiPresetRequested);
+          window.dispatchEvent(new CustomEvent('ui:preset', { detail: window.__uiPresetRequested }));
+        });
+      }
+
+      // Expose focus UI API to the rest of the app
+      window.__setFocusCard = function(payload){
+        if (!focus.card) return;
+        if (!payload){
+          focus.card.style.display = 'none';
+          return;
+        }
+        focus.name.textContent = payload.name || '—';
+        focus.fact.textContent = payload.fact || '';
+        focus.orbit.textContent = payload.orbit || '—';
+        focus.speed.textContent = payload.speed || '—';
+        focus.moons.textContent = payload.moons || '—';
+        focus.card.style.display = 'block';
+      };
+
+      window.__wireFocusButtons = function({onFollow, onReset}){
+        if (focus.follow) focus.follow.onclick = onFollow || null;
+        if (focus.reset) focus.reset.onclick = onReset || null;
+      };
+    })();
+
+
     // =============================================================================
     // AUDIO SYSTEM - Immersive Celestial Soundscape
     // =============================================================================
@@ -965,13 +1393,13 @@
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
 
-        const bloomPass = new THREE.UnrealBloomPass(
+        window.__bloomPass = new THREE.UnrealBloomPass(
           new THREE.Vector2(window.innerWidth, window.innerHeight),
           1.5,  // strength
           0.4,  // radius
           0.85  // threshold
         );
-        composer.addPass(bloomPass);
+        composer.addPass(window.__bloomPass);
         usePostProcessing = true;
         console.log('✨ Post-processing enabled with bloom effect');
       } else {
@@ -982,6 +1410,59 @@
       console.log('📌 Falling back to standard rendering');
       usePostProcessing = false;
     }
+
+    
+    // =============================================================================
+    // VISUAL PRESETS (UI)
+    // =============================================================================
+    function applyVisualPreset(preset){
+      // Safe defaults
+      try{
+        if (preset === 'wow'){
+          renderer.toneMappingExposure = 1.05;
+          if (window.__bloomPass){
+            window.__bloomPass.strength = 2.0;
+            window.__bloomPass.radius = 0.55;
+            window.__bloomPass.threshold = 0.72;
+          }
+          scene.fog.density = 0.00022;
+        } else if (preset === 'museum'){
+          renderer.toneMappingExposure = 0.78;
+          if (window.__bloomPass){
+            window.__bloomPass.strength = 1.0;
+            window.__bloomPass.radius = 0.35;
+            window.__bloomPass.threshold = 0.88;
+          }
+          scene.fog.density = 0.00018;
+        } else if (preset === 'nightride'){
+          renderer.toneMappingExposure = 0.62;
+          if (window.__bloomPass){
+            window.__bloomPass.strength = 1.6;
+            window.__bloomPass.radius = 0.45;
+            window.__bloomPass.threshold = 0.80;
+          }
+          scene.fog.density = 0.00028;
+        } else {
+          // default
+          renderer.toneMappingExposure = 0.8;
+          if (window.__bloomPass){
+            window.__bloomPass.strength = 1.5;
+            window.__bloomPass.radius = 0.4;
+            window.__bloomPass.threshold = 0.85;
+          }
+          scene.fog.density = 0.00025;
+        }
+      }catch(e){ /* ignore */ }
+    }
+
+    // Apply initial preset requested by UI
+    applyVisualPreset(window.__uiPresetRequested || 'default');
+
+    // React to UI preset changes
+    window.addEventListener('ui:preset', (ev) => {
+      applyVisualPreset(ev.detail || 'default');
+    });
+
 
     // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -1943,12 +2424,311 @@
         cameraEndPos.z += offset;
         
         selectedPlanet = targetBody;
-      }
       
-      // Start animation
+          // Update focus card (UI layer)
+          try {
+            const moonsCount = (function(){
+              // Count moons by scanning bodies that are moons and parent planet matches by name heuristic
+              // (moons are added immediately after their planet; not perfect but good enough for UI)
+              if (targetBody.name === "Sun") return "—";
+              // Use planetsData if in scope
+              if (typeof planetsData !== 'undefined') {
+                const pd = planetsData.find(p => p.name === targetBody.name);
+                if (pd && pd.moons) return String(pd.moons.length);
+              }
+              return "—";
+            })();
+
+            window.__setFocusCard({
+              name: targetBody.name,
+              fact: (targetBody.name === "Sun")
+                ? "The star that lights everything. Try WOW preset ✨"
+                : "Tip: switch to Nerd mode for more controls 🧠",
+              orbit: targetBody.semiMajorAxis ? (targetBody.semiMajorAxis.toFixed(1) + " AU-ish") : "—",
+              speed: (targetBody.speed !== undefined) ? targetBody.speed.toFixed(4) : "—",
+              moons: moonsCount
+            });
+
+            window.__wireFocusButtons({
+              onFollow: () => {
+                // re-trigger current selection to re-animate camera (cheap 'follow' UX)
+                const sel = document.getElementById('planetSelector');
+                if (sel) sel.dispatchEvent(new Event('change'));
+              },
+              onReset: () => document.getElementById('resetView')?.click()
+            });
+          } catch (e) { /* ignore UI errors */ }
+
+        }
+        
+        // Start animation
       cameraAnimating = true;
       cameraAnimationProgress = 0;
     });
+
+    // =============================================================================
+    // CLICK / TAP SELECTION (Raycasting) + Guided Tour
+    // =============================================================================
+
+    // Make planets/moons (and their rings/glows) selectable by clicking/tapping in the scene.
+    const __raycaster = new THREE.Raycaster();
+    const __pointer = new THREE.Vector2();
+    const __selectables = [];
+
+    function __tagSelectable(mesh, bodyRef){
+      if (!mesh || !mesh.isObject3D) return;
+      mesh.userData.__bodyRef = bodyRef;
+      if (mesh.isMesh) __selectables.push(mesh);
+      mesh.traverse?.((child)=>{
+        if (child && child.isMesh){
+          child.userData.__bodyRef = bodyRef;
+          __selectables.push(child);
+        }
+      });
+    }
+
+    // Tag all bodies (Sun + planets + moons + rings + glow shells)
+    try {
+      bodies.forEach(b => __tagSelectable(b.obj, b));
+    } catch(e){ /* ignore */ }
+
+    function __worldPosOfBody(body){
+      const p = new THREE.Vector3();
+      if (body?.container) body.container.getWorldPosition(p);
+      else body?.obj?.getWorldPosition(p);
+      return p;
+    }
+
+    function __showFocusForBody(body){
+      if (!body) return;
+      try {
+        const moonsCount = (function(){
+          if (body.name === "Sun") return "—";
+          if (typeof planetsData !== 'undefined') {
+            const pd = planetsData.find(p => p.name === body.name);
+            if (pd && pd.moons) return String(pd.moons.length);
+          }
+          // If it's a moon, say "Moon"
+          if (body.isMoon) return "0";
+          return "—";
+        })();
+
+        const fact = body.isMoon
+          ? "A moon! Try zooming in and orbiting around it 🌙"
+          : (body.name === "Sun"
+              ? "The star that lights everything. Try WOW preset ✨"
+              : "Tip: switch to Nerd mode for more controls 🧠");
+
+        window.__setFocusCard({
+          name: body.name,
+          fact,
+          orbit: body.semiMajorAxis ? (body.semiMajorAxis.toFixed(1) + " AU-ish") : (body.isMoon ? "Orbiting its planet" : "—"),
+          speed: (body.speed !== undefined) ? body.speed.toFixed(4) : "—",
+          moons: moonsCount
+        });
+
+        window.__wireFocusButtons({
+          onFollow: () => __focusBody(body),
+          onReset: () => document.getElementById('resetView')?.click()
+        });
+      } catch(e){ /* ignore */ }
+    }
+
+    function __animateCameraTo(targetPos, radius=1){
+      // Store current camera position and target
+      cameraStartPos.copy(camera.position);
+      cameraStartTarget.copy(controls.target);
+
+      cameraEndTarget.copy(targetPos);
+
+      const offset = Math.max(1.5, radius * 6);
+      cameraEndPos.copy(targetPos);
+      cameraEndPos.y += offset * 0.55;
+      cameraEndPos.z += offset;
+
+      cameraAnimating = true;
+      cameraAnimationProgress = 0;
+    }
+
+    function __focusBody(body){
+      if (!body) return;
+
+      // If it’s a planet or Sun, reuse the existing selector workflow (keeps your current UX consistent)
+      const sel = document.getElementById('planetSelector');
+      if (sel && !body.isMoon) {
+        sel.value = body.name;
+        sel.dispatchEvent(new Event('change'));
+        return;
+      }
+
+      // Otherwise, focus directly (e.g., moons)
+      const p = __worldPosOfBody(body);
+      const r = body?.obj?.geometry?.parameters?.radius || 0.3;
+      selectedPlanet = body;
+      __animateCameraTo(p, r);
+      __showFocusForBody(body);
+    }
+
+    function __isClickOnUI(evt){
+      const t = evt.target;
+      if (!t) return false;
+      return !!t.closest?.('#topBar, #controls, #audioControls, #focusCard, #tourOverlay');
+    }
+
+    function __onCanvasPointer(evt){
+      if (__isClickOnUI(evt)) return;
+      if (!renderer?.domElement) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const x = ( (evt.clientX - rect.left) / rect.width ) * 2 - 1;
+      const y = -( (evt.clientY - rect.top) / rect.height ) * 2 + 1;
+
+      __pointer.set(x, y);
+      __raycaster.setFromCamera(__pointer, camera);
+
+      const hits = __raycaster.intersectObjects(__selectables, true);
+      if (!hits || hits.length === 0) return;
+
+      const hit = hits[0].object;
+      const body = hit?.userData?.__bodyRef;
+      if (!body) return;
+
+      // Ignore clicks on orbit lines/trails if any ever end up in selectables
+      if (!body.name) return;
+
+      __focusBody(body);
+    }
+
+    // Pointer down (works on mouse + touch)
+    renderer.domElement.addEventListener('pointerdown', __onCanvasPointer, {passive:true});
+
+    // =============================================================================
+    // GUIDED TOUR (kid-friendly, short, skippable)
+    // =============================================================================
+    (function(){
+      const overlay = document.getElementById('tourOverlay');
+      const spot = document.getElementById('tourSpot');
+      const card = document.getElementById('tourCard');
+      const title = document.getElementById('tourTitle');
+      const body = document.getElementById('tourBody');
+      const stepTxt = document.getElementById('tourStep');
+      const btnNext = document.getElementById('tourNext');
+      const btnBack = document.getElementById('tourBack');
+      const btnSkip = document.getElementById('tourSkip');
+      const btnTour = document.getElementById('tourBtn');
+
+      if (!overlay || !spot || !card || !title || !body || !btnNext || !btnBack || !btnSkip || !btnTour) return;
+
+      const steps = [
+        { el: '#topBar', t: 'Welcome', b: 'This is a toy solar system you can explore. Let’s do 5 quick “wow” moves.' },
+        { el: 'canvas', t: 'Orbit the camera', b: 'Drag to orbit. Pinch / scroll to zoom. (You can do this during the whole tour.)' },
+        { el: '#planetSelector', t: 'Pick a planet', b: 'Choose a planet… or just tap a planet in space. Try Earth 🌍.' },
+        { el: '#presetSelect', t: 'Make it spectacular', b: 'Switch to “WOW” for extra glow. You can always come back to “Museum”.' },
+        { el: '#toggleFreeze', t: 'Space rocks!', b: 'Freeze time to place asteroids. Unfreeze to watch them fly.' },
+        { el: '#soundQuickToggle', t: 'Sound Lab', b: 'Open Sound Lab and try a soundscape. (Some browsers require a tap to start audio.)' },
+        { el: '#focusCard', t: 'Focus card', b: 'When you focus a planet, you get a little info card. Use Follow for cinematic vibes.' },
+      ];
+      let i = 0;
+
+      function rectFor(sel){
+        if (sel === 'canvas') return renderer.domElement.getBoundingClientRect();
+        const el = document.querySelector(sel);
+        return el ? el.getBoundingClientRect() : null;
+      }
+      function place(sel){
+        const r = rectFor(sel);
+        const pad = 8;
+        const vw = window.innerWidth, vh = window.innerHeight;
+
+        if (!r){
+          spot.style.display = 'none';
+          card.style.left = (vw/2 - 160) + 'px';
+          card.style.top = (vh/2 - 90) + 'px';
+          return;
+        }
+
+        spot.style.display = 'block';
+        const left = Math.max(10, r.left - pad);
+        const top = Math.max(10, r.top - pad);
+        const width = Math.min(vw - 20, r.width + pad*2);
+        const height = Math.min(vh - 20, r.height + pad*2);
+
+        spot.style.left = left + 'px';
+        spot.style.top = top + 'px';
+        spot.style.width = width + 'px';
+        spot.style.height = height + 'px';
+
+        // Put card near spotlight (prefer above, else below)
+        const cardW = card.offsetWidth || 340;
+        const cardH = card.offsetHeight || 160;
+        let cx = left + Math.min(width - cardW, 0) + 0;
+        cx = Math.min(vw - cardW - 12, Math.max(12, left));
+        let cy = top - cardH - 12;
+        if (cy < 12) cy = top + height + 12;
+        if (cy + cardH > vh - 12) cy = vh - cardH - 12;
+
+        card.style.left = cx + 'px';
+        card.style.top = cy + 'px';
+      }
+
+      function render(){
+        const s = steps[i];
+        title.textContent = s.t;
+        body.textContent = s.b;
+        stepTxt.textContent = `${i+1}/${steps.length}`;
+        btnBack.disabled = (i === 0);
+        btnNext.textContent = (i === steps.length - 1) ? 'Done ✅' : 'Next ▶';
+        place(s.el);
+
+        // Small “assist” actions per-step
+        if (s.el === '#presetSelect'){
+          // Nudge preset to WOW in kid mode if user hasn't tried it yet
+          // (non-destructive: only auto-set once)
+          try {
+            const key = 'tourPresetNudge';
+            if (!localStorage.getItem(key)){
+              const ps = document.getElementById('presetSelect');
+              if (ps && ps.value === 'default'){
+                ps.value = 'wow';
+                ps.dispatchEvent(new Event('change'));
+              }
+              localStorage.setItem(key, '1');
+            }
+          } catch(e){}
+        }
+      }
+
+      function open(){
+        overlay.style.display = 'block';
+        i = 0;
+        render();
+      }
+      function close(){
+        overlay.style.display = 'none';
+        try { localStorage.setItem('tourSeen', '1'); } catch(e){}
+      }
+
+      btnTour.addEventListener('click', open);
+      btnSkip.addEventListener('click', close);
+      btnBack.addEventListener('click', ()=>{ if (i>0){ i--; render(); }});
+      btnNext.addEventListener('click', ()=>{
+        if (i < steps.length - 1){ i++; render(); }
+        else close();
+      });
+
+      window.addEventListener('resize', ()=>{ if (overlay.style.display==='block') render(); });
+
+      // Auto-suggest once per device
+      try {
+        if (!localStorage.getItem('tourSeen')){
+          // show a subtle hint by briefly flashing the Tour button
+          setTimeout(()=>{
+            btnTour.animate?.([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}], {duration:900});
+          }, 900);
+        }
+      } catch(e){}
+    })();
+
 
     // Controls
     document.getElementById('toggleAnimation').addEventListener('click', () => {
