@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Greatest Toy Solar System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -26,7 +26,7 @@
 
     #info {
       position: absolute;
-      top: 10px;
+      top: calc(10px + var(--safe-top));
       width: 100%;
       text-align: center;
       color: #fff;
@@ -221,22 +221,32 @@
 
     /* Mobile responsive styles */
     @media (max-width: 768px) {
+      /* iOS Safari fix:
+         - use safe-area insets so panels aren't under the home indicator / notch
+         - use --vvh (visual viewport height) so panels stay reachable when the URL bar changes size
+      */
       #controls, #audioControls {
-        max-width: calc(100vw - 40px);
-        width: calc(100vw - 40px);
-        bottom: 10px;
-        left: 10px;
+        max-width: calc(100vw - 20px - var(--safe-left) - var(--safe-right));
+        width: calc(100vw - 20px - var(--safe-left) - var(--safe-right));
+        left: calc(10px + var(--safe-left));
         right: auto;
-        max-height: 60vh;
+
+        /* default: dock at bottom, above the home indicator */
+        bottom: calc(10px + var(--safe-bottom));
+        top: auto;
+
+        /* keep content reachable */
+        max-height: calc(var(--vvh) - 120px - var(--safe-top) - var(--safe-bottom));
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+
         font-size: 14px;
       }
 
+      /* Audio panel: dock near the top (below the top bar + notch) */
       #audioControls {
-        left: 10px;
-        right: auto;
         bottom: auto;
-        top: 60px;
+        top: calc(60px + var(--safe-top));
       }
 
       #info {
@@ -292,7 +302,13 @@
        UI UPGRADE: Glass Observatory + Kid/Nerd Modes + Focus Card
        ========================================================= */
     :root{
-      --ui-bg: rgba(8, 12, 20, 0.58);
+      
+      --vvh: 100vh; /* visual viewport height (patched by JS on iOS Safari) */
+      --safe-top: env(safe-area-inset-top);
+      --safe-right: env(safe-area-inset-right);
+      --safe-bottom: env(safe-area-inset-bottom);
+      --safe-left: env(safe-area-inset-left);
+--ui-bg: rgba(8, 12, 20, 0.58);
       --ui-stroke: rgba(255,255,255,0.14);
       --ui-glow: rgba(120,180,255,0.35);
       --ui-glow2: rgba(255,120,220,0.22);
@@ -378,7 +394,7 @@
     }
 
     #controls, #audioControls{
-      position:absolute;
+      position: fixed;
       z-index: 10;
     }
 
@@ -491,10 +507,10 @@
         width: auto;
       }
       #topBar{
-        top: 8px;
+        top: calc(8px + var(--safe-top));
         gap: 8px;
         padding: 8px 10px;
-        width: calc(100vw - 16px);
+        width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
         max-width: 740px;
       }
       #topBar .brand{
@@ -887,7 +903,24 @@
         if (focus.follow) focus.follow.onclick = onFollow || null;
         if (focus.reset) focus.reset.onclick = onReset || null;
       };
+    
+    // =============================================================================
+    // MOBILE VIEWPORT FIX (iOS Safari): keep panels inside the *visual* viewport
+    // =============================================================================
+    (function(){
+      function setVVH(){
+        const h = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--vvh', h + 'px');
+      }
+      setVVH();
+      window.addEventListener('resize', setVVH);
+      if (window.visualViewport){
+        window.visualViewport.addEventListener('resize', setVVH);
+        window.visualViewport.addEventListener('scroll', setVVH);
+      }
     })();
+
+})();
 
 
     // =============================================================================
