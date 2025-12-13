@@ -219,8 +219,17 @@
       opacity: 0;
     }
 
+    /* Inline audio controls on mobile share the same menu as animations */
+    #mobileAudioSection {
+      margin-top: 14px;
+    }
+
     /* Mobile responsive styles */
     @media (max-width: 768px) {
+      /* Share the same control stack on mobile */
+      #mobileAudioSection { display: block; }
+      #audioControls.desktop-audio-card { display: none !important; }
+
       /* iOS Safari fix:
          - use safe-area insets so panels aren't under the home indicator / notch
          - use --vvh (visual viewport height) so panels stay reachable when the URL bar changes size
@@ -721,9 +730,15 @@
       </select>
     </div>
     </div>
+
+    <!-- Mobile-friendly audio controls (shares the same menu as animation controls) -->
+    <div class="control-section" id="mobileAudioSection" style="display: none;">
+      <div class="control-panel-header" id="mobileAudioHeader">🎵 Audio Controls</div>
+      <div class="control-panel-content" id="mobileAudioContent"></div>
+    </div>
   </div>
 
-  <div id="audioControls">
+  <div id="audioControls" class="desktop-audio-card">
     <div class="control-panel-header" id="audioControlsHeader">🎵 Audio Controls</div>
     <div class="control-panel-content" id="audioControlsContent">
     
@@ -813,7 +828,19 @@
             audioContent.classList.toggle('collapsed');
           });
         }
-        
+
+        // Mobile inline audio controls (same menu as animations)
+        const mobileAudioHeader = document.getElementById('mobileAudioHeader');
+        const mobileAudioContent = document.getElementById('mobileAudioContent');
+        if (mobileAudioHeader && mobileAudioContent) {
+          mobileAudioHeader.classList.add('collapsed');
+          mobileAudioContent.classList.add('collapsed');
+          mobileAudioHeader.addEventListener('click', function() {
+            this.classList.toggle('collapsed');
+            mobileAudioContent.classList.toggle('collapsed');
+          });
+        }
+
         listenersAdded = true;
       }
       
@@ -866,20 +893,57 @@
       // Sound quick toggle (show/hide audio panel; persists across modes/devices)
       const soundBtn = document.getElementById('soundQuickToggle');
       const audioPanel = document.getElementById('audioControls');
-      const savedAudioVis = localStorage.getItem('audioPanelVisible');
-      if (audioPanel){
-        // Default: show in nerd, hide in kid (but remember if user changed it)
-        if (savedAudioVis === null){
-          audioPanel.style.display = body.classList.contains('kid-mode') ? 'none' : '';
-        } else {
-          audioPanel.style.display = (savedAudioVis === '1') ? '' : 'none';
+      const mobileAudioSection = document.getElementById('mobileAudioSection');
+      const mobileAudioContent = document.getElementById('mobileAudioContent');
+      const audioContent = document.getElementById('audioControlsContent');
+      const mqlMobile = window.matchMedia('(max-width: 768px)');
+      let audioInMobile = false;
+      let audioVisible = true;
+
+      function applyAudioVisibility(show){
+        audioVisible = show;
+        localStorage.setItem('audioPanelVisible', show ? '1' : '0');
+        if (audioInMobile && mobileAudioSection){
+          mobileAudioSection.style.display = show ? '' : 'none';
+        } else if (audioPanel){
+          audioPanel.style.display = show ? '' : 'none';
         }
       }
-      if (soundBtn && audioPanel){
+
+      function syncAudioLayout(){
+        if (!audioContent || !mobileAudioContent || !audioPanel || !mobileAudioSection) return;
+
+        if (mqlMobile.matches){
+          if (!audioInMobile){
+            while (audioContent.firstChild){
+              mobileAudioContent.appendChild(audioContent.firstChild);
+            }
+            audioInMobile = true;
+          }
+          mobileAudioSection.style.display = audioVisible ? '' : 'none';
+          audioPanel.style.display = 'none';
+        } else {
+          if (audioInMobile){
+            while (mobileAudioContent.firstChild){
+              audioContent.appendChild(mobileAudioContent.firstChild);
+            }
+            audioInMobile = false;
+          }
+          mobileAudioSection.style.display = 'none';
+          audioPanel.style.display = audioVisible ? '' : 'none';
+        }
+      }
+
+      const savedAudioVis = localStorage.getItem('audioPanelVisible');
+      const defaultVisible = mqlMobile.matches ? true : !body.classList.contains('kid-mode');
+      audioVisible = savedAudioVis === null ? defaultVisible : (savedAudioVis === '1');
+      syncAudioLayout();
+      mqlMobile.addEventListener('change', syncAudioLayout);
+
+      if (soundBtn){
         soundBtn.addEventListener('click', ()=>{
-          const willShow = (audioPanel.style.display === 'none');
-          audioPanel.style.display = willShow ? '' : 'none';
-          localStorage.setItem('audioPanelVisible', willShow ? '1' : '0');
+          applyAudioVisibility(!audioVisible);
+          syncAudioLayout();
         });
       }
 // Mode toggle
