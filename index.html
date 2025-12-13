@@ -580,11 +580,40 @@
     }
     #hoverLabel.show{ opacity: 1; }
 
+  
+    /* Full-screen UI toggle (mobile-friendly) */
+    #fullscreenToggle{
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 10px);
+      right: calc(env(safe-area-inset-right, 0px) + 10px);
+      z-index: 99999;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(0,0,0,0.38);
+      color: #fff;
+      font-size: 16px;
+      line-height: 1;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
+    body.fullscreen-ui #hud,
+    body.fullscreen-ui #controls,
+    body.fullscreen-ui #audioControls,
+    body.fullscreen-ui #info,
+    body.fullscreen-ui #hoverLabel,
+    body.fullscreen-ui #focusCard{
+      display: none !important;
+    }
+
   </style>
 </head>
 
 <body>
   <div id="info">✨ Spectacular Solar System ✨</div>
+  <button id="fullscreenToggle" title="Toggle Full Screen UI">⛶</button>
+
 
   <div id="topBar" aria-label="Toy Solar System Controls">
     <div class="brand">✨ Toy Solar System</div>
@@ -834,29 +863,35 @@
         });
       }
 
-      // Sound quick toggle (show/hide audio panel even in nerd mode)
+      // Sound quick toggle (show/hide audio panel; persists across modes/devices)
       const soundBtn = document.getElementById('soundQuickToggle');
       const audioPanel = document.getElementById('audioControls');
+      const savedAudioVis = localStorage.getItem('audioPanelVisible');
+      if (audioPanel){
+        // Default: show in nerd, hide in kid (but remember if user changed it)
+        if (savedAudioVis === null){
+          audioPanel.style.display = body.classList.contains('kid-mode') ? 'none' : '';
+        } else {
+          audioPanel.style.display = (savedAudioVis === '1') ? '' : 'none';
+        }
+      }
       if (soundBtn && audioPanel){
         soundBtn.addEventListener('click', ()=>{
-          const isHidden = audioPanel.style.display === 'none';
-          audioPanel.style.display = isHidden ? '' : 'none';
+          const willShow = (audioPanel.style.display === 'none');
+          audioPanel.style.display = willShow ? '' : 'none';
+          localStorage.setItem('audioPanelVisible', willShow ? '1' : '0');
         });
       }
-
-      // Mode toggle
+// Mode toggle
       const modeBtn = document.getElementById('modeToggle');
       if (modeBtn){
         modeBtn.addEventListener('click', ()=>{
           const next = body.classList.contains('kid-mode') ? 'nerd' : 'kid';
           setMode(next);
-          // In kid mode, ensure audio panel is hidden unless explicitly shown
-          if (next === 'kid' && audioPanel) audioPanel.style.display = 'none';
-          if (next === 'nerd' && audioPanel) audioPanel.style.display = '';
+          // Do NOT force-hide audio panel on mode switch; respect user's Sound toggle preference.
         });
       }
-
-      // Focus card helpers (populated later once bodies exist)
+// Focus card helpers (populated later once bodies exist)
       const focus = {
         card: document.getElementById('focusCard'),
         name: document.getElementById('focusName'),
@@ -904,6 +939,23 @@
         if (focus.reset) focus.reset.onclick = onReset || null;
       };
     
+    
+      // Full-screen UI toggle (hide everything except this button)
+      const fsBtn = document.getElementById('fullscreenToggle');
+      const savedFS = localStorage.getItem('fullscreenUI');
+      if (savedFS === '1') document.body.classList.add('fullscreen-ui');
+      if (fsBtn){
+        fsBtn.addEventListener('click', ()=>{
+          document.body.classList.toggle('fullscreen-ui');
+          const on = document.body.classList.contains('fullscreen-ui');
+          localStorage.setItem('fullscreenUI', on ? '1' : '0');
+          fsBtn.textContent = on ? '✕' : '⛶';
+        });
+        // Set initial icon
+        fsBtn.textContent = document.body.classList.contains('fullscreen-ui') ? '✕' : '⛶';
+      }
+
+
     // =============================================================================
     // MOBILE VIEWPORT FIX (iOS Safari): keep panels inside the *visual* viewport
     // =============================================================================
@@ -1523,6 +1575,8 @@
 
     // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    window.__controlsRef = controls;
+    window.__cameraRef = camera;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
@@ -2508,9 +2562,11 @@
 
             window.__wireFocusButtons({
               onFollow: () => {
-                // re-trigger current selection to re-animate camera (cheap 'follow' UX)
-                const sel = document.getElementById('planetSelector');
-                if (sel) sel.dispatchEvent(new Event('change'));
+                // Toggle follow: keep camera tracking the selected body.
+                try {
+                  const body = targetBody;
+                  window.__followBody = (window.__followBody && window.__followBody === body) ? null : body;
+                } catch(e){ window.__followBody = null; }
               },
               onReset: () => document.getElementById('resetView')?.click()
             });
@@ -3623,6 +3679,22 @@ if (__isClickOnUI(evt)) return;
           audioSystem.cleanupSpatialSources();
         }
       }
+
+      
+      // Follow mode: keep camera locked on the followed body (toggle via Focus ▸ Follow)
+      try {
+        const fb = window.__followBody;
+        if (fb && window.__controlsRef && window.__cameraRef){
+          const p = __worldPosOfBody ? __worldPosOfBody(fb) : (fb.obj ? fb.obj.getWorldPosition(new THREE.Vector3()) : null);
+          if (p){
+            const cam = window.__cameraRef;
+            const ctrls = window.__controlsRef;
+            const offset = cam.position.clone().sub(ctrls.target);
+            ctrls.target.copy(p);
+            cam.position.copy(p.clone().add(offset));
+          }
+        }
+      } catch(e) { /* ignore */ }
 
       controls.update();
       updateLabels();
