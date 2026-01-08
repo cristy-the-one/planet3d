@@ -1694,35 +1694,54 @@
 
     // Space dust particles
     const dustCount = 1000;
-    const dustGeometry = new THREE.BufferGeometry();
-    const dustVertices = [];
+    const dustSprites = [];
     const dustVelocities = [];
 
+    // Create a soft circular sprite for dust to avoid blocky particles
+    const dustCanvas = document.createElement('canvas');
+    dustCanvas.width = dustCanvas.height = 64;
+    const dustCtx = dustCanvas.getContext('2d');
+    const dustGradient = dustCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    dustGradient.addColorStop(0, 'rgba(255,255,255,0.9)');
+    dustGradient.addColorStop(0.4, 'rgba(255,255,255,0.4)');
+    dustGradient.addColorStop(1, 'rgba(255,255,255,0)');
+    dustCtx.fillStyle = dustGradient;
+    dustCtx.fillRect(0, 0, 64, 64);
+    const dustTexture = new THREE.CanvasTexture(dustCanvas);
+    dustTexture.needsUpdate = true;
+    dustTexture.generateMipmaps = false;
+    dustTexture.minFilter = THREE.LinearFilter;
+    dustTexture.magFilter = THREE.LinearFilter;
+
+    const dustMaterial = new THREE.SpriteMaterial({
+      color: 0xffffff,
+      map: dustTexture,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const dustGroup = new THREE.Group();
+
     for (let i = 0; i < dustCount; i++) {
-      dustVertices.push(
+      const sprite = new THREE.Sprite(dustMaterial);
+      const size = 0.2 + Math.random() * 0.35;
+      sprite.scale.set(size, size, 1);
+      sprite.position.set(
         (Math.random() - 0.5) * 200,
         (Math.random() - 0.5) * 200,
         (Math.random() - 0.5) * 200
       );
-      dustVelocities.push(
+      dustGroup.add(sprite);
+      dustSprites.push(sprite);
+      dustVelocities.push(new THREE.Vector3(
         (Math.random() - 0.5) * 0.02,
         (Math.random() - 0.5) * 0.02,
         (Math.random() - 0.5) * 0.02
-      );
+      ));
     }
-
-    dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
-    const dustMaterial = new THREE.PointsMaterial({
-      color: 0xaaaaaa,
-      size: 0.5,
-      transparent: true,
-      opacity: 0.4,
-      sizeAttenuation: true,
-      blending: THREE.AdditiveBlending
-    });
-
-    const spaceDust = new THREE.Points(dustGeometry, dustMaterial);
-    scene.add(spaceDust);
+    scene.add(dustGroup);
 
     // Create skybox sphere with stars texture
     const skyboxGeometry = new THREE.SphereGeometry(1500, 64, 64);
@@ -2399,11 +2418,11 @@
 
     // Asteroid Belt (between Mars and Jupiter)
     const asteroidBelt = [];
-    const asteroidCount = 800;
+    const asteroidCount = 180;
     const asteroidGroup = new THREE.Group();
 
     for (let i = 0; i < asteroidCount; i++) {
-      const radius = 0.05 + Math.random() * 0.15;
+      const radius = 0.02 + Math.random() * 0.05;
       const geometry = new THREE.DodecahedronGeometry(radius, 0);
       const material = new THREE.MeshStandardMaterial({
         color: new THREE.Color().setHSL(0.05 + Math.random() * 0.05, 0.3, 0.3 + Math.random() * 0.2),
@@ -3420,19 +3439,16 @@ if (__isClickOnUI(evt)) return;
       });
 
       // Animate space dust
-      const dustPositions = dustGeometry.attributes.position.array;
       for (let i = 0; i < dustCount; i++) {
-        const idx = i * 3;
-        dustPositions[idx] += dustVelocities[idx];
-        dustPositions[idx + 1] += dustVelocities[idx + 1];
-        dustPositions[idx + 2] += dustVelocities[idx + 2];
+        const sprite = dustSprites[i];
+        const velocity = dustVelocities[i];
+        sprite.position.add(velocity);
 
         // Wrap around
-        if (Math.abs(dustPositions[idx]) > 100) dustPositions[idx] *= -1;
-        if (Math.abs(dustPositions[idx + 1]) > 100) dustPositions[idx + 1] *= -1;
-        if (Math.abs(dustPositions[idx + 2]) > 100) dustPositions[idx + 2] *= -1;
+        if (Math.abs(sprite.position.x) > 100) sprite.position.x *= -1;
+        if (Math.abs(sprite.position.y) > 100) sprite.position.y *= -1;
+        if (Math.abs(sprite.position.z) > 100) sprite.position.z *= -1;
       }
-      dustGeometry.attributes.position.needsUpdate = true;
 
       // Handle camera animation
       if (cameraAnimating) {
